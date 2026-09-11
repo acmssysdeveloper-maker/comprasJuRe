@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const s=fs.readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
+assert.ok(s.includes("server.listen(PORT,'127.0.0.1'"));
+assert.ok(s.includes('X-Frame-Options'));
+assert.ok(s.includes('X-Content-Type-Options'));
+assert.ok(s.includes('Cross-Origin-Resource-Policy'));
+assert.ok(s.includes('process.env.GEMINI_API_KEY'));
+assert.ok(!s.includes("Access-Control-Allow-Origin:*"));
+console.log('Local proxy security checks: PASS');

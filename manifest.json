@@ -1,0 +1,11 @@
+{
+  "name": "Compras da JuRe",
+  "short_name": "Compras JuRe",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f8",
+  "theme_color": "#6b55e8",
+  "lang": "pt-BR",
+  "icons": [],
+  "version": "2.6.4"
+}

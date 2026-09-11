@@ -1,0 +1,77 @@
+
+>>> tests/validate.mjs
+Compras da JuRe v2.6.0 static/security checks: PASS
+
+>>> tests/anti-fail-audit.mjs
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Anti-fail OCR regression: PASS — OCR remains evidence only; incomplete readings must escalate/block.
+
+>>> tests/reader-engine-test.mjs
+ReceiptEngine unit smoke: PASS
+
+>>> tests/ocr-hardening-test.mjs
+Estimating resolution as 368
+Detected 382 diacritics
+PSM 3: 0 item candidates; total=29.98; cnpj=-
+Estimating resolution as 368
+Detected 470 diacritics
+PSM 4: 1 item candidates; total=25.96; cnpj=-
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+PSM 6: 12 item candidates; total=39.3; cnpj=-
+Estimating resolution as 368
+Detected 470 diacritics
+PSM 11: 5 item candidates; total=39.98; cnpj=-
+Estimating resolution as 368
+OSD: Weak margin (4.21) for 205 blob text block, but using orientation anyway: 0
+Detected 382 diacritics
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+PSM 12: 4 item candidates; total=5.98; cnpj=-
+OCR hardening assertions: PASS
+
+>>> tests/receipt-parser-test.mjs
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Receipt parser regression: PASS (synthetic=2, OCR-real candidates=12)
+
+>>> tests/receipt-fixture-test.mjs
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Receipt fixture integration test: PASS (OCR real executado; leitura parcial é bloqueada até conferência)
+
+>>> tests/server-security-test.mjs
+Local proxy security checks: PASS
+
+ALL TESTS: PASS

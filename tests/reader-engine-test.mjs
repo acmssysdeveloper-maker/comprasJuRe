@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../modules/receipt-engine.js',import.meta.url),'utf8');
+const ctx={console};vm.createContext(ctx);vm.runInContext(source,ctx);
+const e=ctx.ReceiptEngine;
+assert.equal(typeof e.keyCheckDigit,'function');
+assert.equal(typeof e.extractKeyFromText,'function');
+const key='35160917833301002223650010003839831012345676';
+assert.equal(e.keyCheckDigit(key),true);
+assert.equal(e.keyCheckDigit('35160917833301002223650010003839831012345678'),false);
+assert.equal(e.extractKeyFromText('Chave: 3516 0917 8333 0100 2223 6500 1000 3839 8310 1234 5676'),key);
+assert.equal(e.parseQr('https://exemplo.invalid/consulta?p=35160917833301002223650010003839831012345676').validKey,true);
+console.log('ReceiptEngine fiscal-key tests: PASS');

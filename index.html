@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6b55e8">
+<meta name="description" content="Compras da JuRe — histórico, consumo, preços, listas e economia.">
+<link rel="stylesheet" href="styles.css">
+<title>Compras da JuRe</title>
+<script defer src="modules/receipt-engine.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar">
+  <div class="brand"><div class="mark">J</div><div><b>Compras da JuRe</b><span>Inteligência de compras</span></div></div>
+  <nav id="nav">
+    <button data-page="dashboard" class="active">⌂ <span>Visão geral</span></button>
+    <button data-page="compras">▣ <span>Compras</span></button>
+    <button data-page="listas">✓ <span>Minhas listas</span></button>
+    <button data-page="importar">↑ <span>Importar comprovante</span></button>
+    <button data-page="produtos">◫ <span>Produtos</span></button>
+    <button data-page="mercados">⌂ <span>Mercados</span></button>
+    <button data-page="consumo">⌁ <span>Consumo</span></button>
+    <button data-page="economia">R$ <span>Economia & perdas</span></button>
+    <button data-page="relatorios">▤ <span>Relatórios</span></button>
+    <button data-page="agente">✦ <span>Agente JuRe</span></button>
+    <button data-page="manual">? <span>Manual do usuário</span></button>
+    <button data-page="config">⚙ <span>Configurações</span></button>
+    <button data-page="updates">↻ <span>Atualizações</span></button>
+  </nav>
+  <div class="side-foot">v2.6.4 · modo fiscal robusto</div>
+</aside>
+
+<main>
+<header class="topbar">
+  <div><div class="eyebrow">COMPRAS DOMÉSTICAS</div><h1 id="pageTitle">Visão geral</h1></div>
+  <div class="top-actions"><button class="ghost" id="backupBtn">Backup</button><button class="ghost" id="restoreBackupBtn">Restaurar</button><input id="restoreBackupFile" type="file" accept="application/json,.json" hidden><button class="primary" data-go="importar">+ Importar</button></div>
+</header>
+
+<section id="dashboard" class="page active">
+  <div class="hero">
+    <div><div class="eyebrow">HISTÓRICO + INTELIGÊNCIA</div><h2>Suas compras, organizadas para ajudar você a decidir melhor.</h2><p>O sistema separa cadastro de produto e ocorrência de compra. Assim, o mesmo produto pode ser comprado muitas vezes sem duplicar seu catálogo.</p></div>
+    <div class="hero-stat"><span>Total histórico</span><strong id="dashTotal">R$ 0,00</strong><small id="dashMeta"></small></div>
+  </div>
+  <div class="cards four">
+    <div class="card"><span>Gasto acumulado</span><strong id="kpiTotal">R$ 0,00</strong><small>compras confirmadas</small></div>
+    <div class="card"><span>Produtos catalogados</span><strong id="kpiProducts">0</strong><small>sem duplicações</small></div>
+    <div class="card"><span>Mercados</span><strong id="kpiMarkets">0</strong><small>com histórico</small></div>
+    <div class="card good"><span>Economia comprovada</span><strong id="kpiDiscount">R$ 0,00</strong><small>descontos registrados</small></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><div class="panel-head"><h3>Gasto por categoria</h3></div><div id="categoryChart"></div></div>
+    <div class="panel"><div class="panel-head"><h3>Últimas compras</h3><button class="link" data-go="compras">Ver tudo</button></div><div id="recentPurchases"></div></div>
+  </div>
+  <div class="panel"><div class="panel-head"><h3>Insights da casa</h3><span class="badge">com base no histórico</span></div><div id="dashboardInsights" class="insights"></div></div>
+</section>
+
+<section id="compras" class="page">
+  <div class="section-head"><div><div class="eyebrow">HISTÓRICO</div><h2>Compras realizadas</h2><p>Cada ida ao mercado fica registrada com sua data original.</p></div><button class="primary" data-go="importar">Importar compra</button></div>
+  <div id="purchaseCards"></div>
+</section>
+
+<section id="listas" class="page">
+  <div class="section-head"><div><div class="eyebrow">PLANEJAMENTO</div><h2>Minhas listas</h2><p>Escolha produtos já catalogados e gere uma lista nova sem duplicar o histórico.</p></div><button class="primary" id="newListBtn">+ Nova lista</button></div>
+  <div id="listsArea"></div>
+</section>
+
+<section id="importar" class="page">
+  <div class="section-head"><div><div class="eyebrow">ENTRADA</div><h2>Importar comprovante</h2><p>Foto/PDF → extração → cruzamento → conferência → gravação.</p></div></div>
+  <div class="import-tabs"><button class="tab active" data-mode="file">Arquivo</button><button class="tab" data-mode="manual">Manual</button></div>
+  <div class="import-grid">
+    <div class="panel">
+      <input id="receiptFile" type="file" accept="image/*,.pdf,application/pdf">
+      <div id="dropZone" class="drop"><div class="drop-icon">↑</div><h3>Escolha ou arraste o comprovante</h3><p>JPG, JPEG, PNG ou PDF</p><small>O arquivo original é associado à compra e os dados podem ser revisados antes de salvar.</small></div>
+      <div id="fileMeta" class="file-meta hidden"></div>
+      <div id="receiptPreview" class="receipt-preview hidden" aria-label="Pré-visualização do comprovante"></div>
+      <div class="fiscal-key-box"><label>Chave fiscal NF-e/NFC-e (44 dígitos)<input id="fiscalKey" inputmode="numeric" maxlength="44" placeholder="A chave será encontrada pelo QR ou informada manualmente"></label><div class="fiscal-actions"><button class="primary" id="scanQrBtn" type="button">Ler QR pela câmera</button><button class="primary" id="consultFiscalBtn" disabled>Consultar por chave</button><button class="ghost" id="openDanfeBtn" disabled>Abrir consulta oficial</button></div><small id="fiscalKeyStatus">Você pode usar a câmera do smartphone para ler o QR impresso na NFC-e.</small></div><div class="fiscal-xml-box"><label>Segunda rota: XML fiscal<input id="fiscalXmlFile" type="file" accept=".xml,text/xml,application/xml"></label><div class="fiscal-actions"><button class="ghost" id="sendFiscalXmlBtn">Enviar XML e gerar DANFE</button></div><small>Use o XML quando a nota estiver fora da janela da consulta por chave, quando for NFC-e ou quando você quiser eliminar OCR da origem dos itens.</small></div><div class="fiscal-artifacts hidden" id="fiscalArtifactRow"><span id="fiscalArtifactStatus">Artefatos fiscais disponíveis:</span><button class="ghost" id="downloadFiscalJsonBtn">Baixar JSON</button><button class="ghost" id="downloadFiscalPdfBtn">Baixar PDF</button><button class="ghost" id="downloadFiscalXmlBtn">Baixar XML</button></div><div class="button-row"><button class="primary" id="ocrBtn">Ler comprovante — motor anti-falhas</button><button class="ghost" id="geminiReceiptBtn">IA visual complementar</button></div>
+      <div id="importStatus" class="import-status" aria-live="polite"><span class="status-dot"></span><div><b id="importStatusTitle">Aguardando comprovante</b><p id="importStatusText">Selecione uma imagem ou PDF para iniciar a leitura.</p><small id="importElapsed" class="import-elapsed">Tempo decorrido: 0.0 s</small><small id="importStatusDetail" class="import-detail hidden"></small></div></div>
+      <div class="helper" id="importHelper">O sistema informa cada etapa. Se a leitura falhar, ele mostra a causa e não inventa dados nem reaproveita outra compra.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Conferência</h3><span id="receiptConfidence" class="badge">aguardando</span></div>
+      <div id="receiptEditor" class="editor empty">Os campos identificados aparecerão aqui.</div>
+      <div class="button-row hidden" id="saveImportRow"><button class="primary" id="saveImportBtn">Salvar compra</button><button class="ghost" id="cancelImportBtn">Limpar</button></div>
+    </div>
+  </div>
+  <div class="panel"><div class="panel-head"><h3>Como o cruzamento funciona</h3></div><div class="method-grid"><div><b>1. Mercado</b><p>CNPJ → nome → endereço → cidade → histórico.</p></div><div><b>2. Produto</b><p>EAN → marca → nome → embalagem → unidade.</p></div><div><b>3. Matemática</b><p>Quantidade × preço unitário → total da linha.</p></div><div><b>4. Segurança</b><p>Quando a confiança é baixa, o sistema pede confirmação.</p></div></div></div>
+</section>
+
+<section id="produtos" class="page">
+  <div class="section-head"><div><div class="eyebrow">CATÁLOGO MESTRE</div><h2>Produtos</h2><p>Um produto pode aparecer em muitas compras, mas só uma vez no catálogo.</p></div><input id="productSearch" class="search" placeholder="Buscar nome, marca ou embalagem"></div>
+  <div class="filter-row"><select id="productCategoryFilter"><option value="">Todas as categorias</option></select><select id="healthFilter"><option value="">Todos os perfis</option><option>Saudável</option><option>Moderado</option><option>Evitar</option><option>Não classificado</option></select></div>
+  <div class="table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Apresentação</th><th>Último preço</th><th>Ocorrências</th><th>Ações</th></tr></thead><tbody id="productsTable"></tbody></table></div>
+</section>
+
+<section id="mercados" class="page">
+  <div class="section-head"><div><div class="eyebrow">COMPARAÇÃO</div><h2>Mercados</h2><p>O histórico por estabelecimento evita conclusões baseadas em uma única compra.</p></div></div>
+  <div id="marketCards" class="market-grid"></div>
+</section>
+
+<section id="consumo" class="page">
+  <div class="section-head"><div><div class="eyebrow">COMPORTAMENTO</div><h2>Curva de consumo</h2><p>O app mede ritmo de aquisição. Consumo físico só é estimado quando houver histórico suficiente.</p></div><select id="consumptionProduct"></select></div>
+  <div class="panel"><div class="panel-head"><h3 id="consumptionTitle">Selecione um produto</h3><span id="consumptionBadge" class="badge"></span></div><div id="consumptionChart" class="bar-chart"></div><div id="consumptionText" class="insight-text"></div></div>
+</section>
+
+<section id="economia" class="page">
+  <div class="section-head"><div><div class="eyebrow">INTELIGÊNCIA</div><h2>Economia & perdas</h2><p>O sistema distingue economia comprovada, oportunidade e possível excesso.</p></div></div>
+  <div class="cards four"><div class="card good"><span>Economia comprovada</span><strong id="ecoConfirmed">R$ 0,00</strong><small>descontos</small></div><div class="card warn"><span>Oportunidade estimada</span><strong id="ecoOpportunity">R$ 0,00</strong><small>preço histórico</small></div><div class="card"><span>Preço acima da média</span><strong id="ecoAbove">0</strong><small>ocorrências</small></div><div class="card"><span>Possível excesso</span><strong id="ecoExcess">0</strong><small>sinais</small></div></div>
+  <div id="economyList" class="stack"></div>
+</section>
+
+<section id="relatorios" class="page">
+  <div class="section-head"><div><div class="eyebrow">SAÍDA</div><h2>Relatórios</h2><p>Relatórios imprimíveis e exportação de dados.</p></div><div class="top-actions"><button class="ghost" id="exportJsonBtn">Exportar JSON</button><button class="primary" id="printBtn">Imprimir / PDF</button></div></div>
+  <div id="reportContent" class="report"></div>
+</section>
+
+<section id="agente" class="page">
+  <div class="section-head"><div><div class="eyebrow">AGENTE JURE</div><h2>Assistente inteligente</h2><p>Ele pode consultar o banco, o manual e as regras do aplicativo. A IA não pode alterar o histórico sem confirmação.</p></div><button class="ghost" data-go="config">Configurar Gemini</button></div>
+  <div class="agent-grid">
+    <div class="panel agent-chat"><div id="chatMessages" class="chat-messages"><div class="msg bot">Olá. Posso responder sobre gastos, produtos, preços, mercados, listas, consumo e sobre como usar o aplicativo.</div></div><div class="chat-input"><input id="agentInput" placeholder="Ex.: quanto gastei no Alvorada?"><button class="primary" id="agentSend">Enviar</button></div></div>
+    <div class="panel"><h3>Consultas rápidas</h3><div class="quick"><button data-q="Qual foi minha última compra?">Última compra</button><button data-q="Qual produto tem maior gasto?">Maior gasto</button><button data-q="Quais produtos aparecem mais de uma vez?">Itens recorrentes</button><button data-q="Onde encontrei melhores preços?">Melhores preços</button><button data-q="Como funciona a edição da compra?">Como editar?</button></div><div class="helper">Sem Gemini configurado, o agente usa respostas determinísticas do próprio banco. Com Gemini, ele recebe um contexto controlado do banco e do manual.</div></div>
+  </div>
+</section>
+
+<section id="manual" class="page">
+  <div class="section-head"><div><div class="eyebrow">AJUDA</div><h2>Manual do usuário</h2><p>O manual também é uma fonte de contexto do agente.</p></div></div>
+  <article class="manual" id="manualContent"></article>
+</section>
+
+<section id="config" class="page">
+  <div class="section-head"><div><div class="eyebrow">CONFIGURAÇÃO</div><h2>Configurações</h2><p>Dados permanecem no dispositivo neste modo. Gemini e Consulta DANFE usam apenas o servidor local seguro.</p></div></div>
+  <div class="panel settings">
+    <label>Modelo Gemini<select id="geminiModel"><option value="gemini-3.7-flash">gemini-3.7-flash</option><option value="gemini-3.6-flash">gemini-3.6-flash</option><option value="gemini-3.5-flash">gemini-3.5-flash</option></select></label>
+    <div class="security"><b>Modo seguro</b><p>A chave Gemini não é armazenada no navegador. A IA visual e o agente só usam o servidor local seguro, com a chave mantida no arquivo de ambiente do servidor.</p><p><b>OCR local:</b> funciona sem chave. <b>IA fiscal:</b> usa <code>CONSULTADANFE_API_URL</code>/<code>CONSULTADANFE_API_KEY</code> no servidor local. A chave nunca é salva no navegador.</p></div>
+    <button class="primary" id="saveSettings">Salvar configurações</button>
+  </div>
+</section>
+
+<section id="updates" class="page">
+  <div class="section-head"><div><div class="eyebrow">MANUTENÇÃO</div><h2>Atualizações</h2><p>O app usa versionamento e migrações para preservar o histórico.</p></div><button class="ghost" id="checkUpdate">Verificar</button></div>
+  <div class="panel"><div class="version-box"><span>Versão instalada</span><strong id="currentVersion">2.6.1</strong></div><div id="updateStatus" class="helper">Nenhuma verificação realizada.</div><div class="method-grid"><div><b>Atualização estática</b><p>Substitua os arquivos publicados por um novo pacote versionado.</p></div><div><b>Banco protegido</b><p>As migrações são executadas antes do carregamento e não apagam dados históricos.</p></div><div><b>Backup antes do update</b><p>Exporte um JSON antes de trocar a versão.</p></div><div><b>Sem “autoapagar”</b><p>Exclusão é lógica/arquivamento; registros históricos continuam recuperáveis.</p></div></div></div>
+</section>
+
+
+<div id="qrScannerModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" data-close-qr></div>
+  <div class="modal-card qr-scanner-card" role="dialog" aria-modal="true" aria-labelledby="qrScannerTitle">
+    <div class="modal-head"><div><div class="eyebrow">NFC-e</div><h3 id="qrScannerTitle">Ler QR pela câmera</h3></div><button class="icon-btn" id="closeQrScannerBtn" type="button" aria-label="Fechar">×</button></div>
+    <div class="qr-video-wrap"><video id="qrVideo" playsinline muted autoplay></video><div class="qr-frame"><span></span></div></div>
+    <canvas id="qrScanCanvas" hidden></canvas>
+    <div class="qr-status" id="qrScannerStatus">Solicitando acesso à câmera…</div>
+    <div class="button-row"><button class="primary" id="qrCaptureFallbackBtn" type="button">Usar foto do QR</button><button class="ghost" id="cancelQrScannerBtn" type="button">Cancelar</button></div>
+    <input id="qrPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+    <small class="hint">No celular, mantenha o QR inteiro dentro do quadro e a câmera a uns 15–30 cm do comprovante.</small>
+  </div>
+</div>
+</main>
+</div>
+
+<div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h3 id="modalTitle"></h3><button id="modalClose">×</button></div><div id="modalBody"></div></div></div>
+<div id="toast" class="toast"></div>
+
+
+<script src="app.js"></script>
+</body>
+</html>

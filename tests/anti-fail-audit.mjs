@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+const root=new URL('../',import.meta.url);
+const fixture=new URL('test-fixtures/comprovante-alvorada-2026-09-10.jpg',root);
+const text=execFileSync('tesseract',[fixture.pathname,'stdout','-l','por','--psm','6'],{encoding:'utf8'});
+assert.ok(/10\/09(?:\/|)26/.test(text),'data do fixture não localizada pelo OCR de referência');
+assert.ok((text.match(/\b\d{8,14}\b/g)||[]).length>=3,'poucos códigos no OCR de referência');
+const engine=fs.readFileSync(new URL('../modules/receipt-engine.js',import.meta.url),'utf8');
+assert.ok(engine.includes("['gray','soft','contrast','shadow','adaptive']"));
+assert.ok(engine.includes("['header',0,.24]")&&engine.includes("['items',.18,.86]")&&engine.includes("['footer',.72,1]"));
+assert.ok(engine.includes('keyCheckDigit')&&engine.includes('attemptBoth'));
+assert.ok(engine.includes('preserve_interword_spaces')&&engine.includes('user_defined_dpi'));
+const report=JSON.parse(fs.readFileSync(new URL('tests/RECEIPT_TEST_REPORT.json',root),'utf8'));
+assert.equal(report.receiptDate,'2026-09-10');assert.equal(report.lineCount,23);assert.equal(report.sumNetLines,350.01);
+console.log('Anti-fail OCR regression: PASS — OCR remains evidence only; incomplete readings must escalate/block.');

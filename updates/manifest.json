@@ -1,0 +1,13 @@
+{
+  "app": "Compras da JuRe",
+  "version": "2.6.2",
+  "minSchemaVersion": 3,
+  "released": "2026-09-11",
+  "notes": [
+    "Motor OCR anti-falhas: QR validado, múltiplos pré-processamentos, OCR regional, clustering de evidências e validação matemática.",
+    "IA visual e agente usam exclusivamente proxy local; nenhuma chave Gemini é armazenada no navegador.",
+    "Fallback opcional OCR secundário via proxy local; divergências nunca são mescladas cegamente.",
+    "Correção do parser numérico para valores BR/decimal e eliminação de seed.json duplicado.",
+    "Integração fiscal corrigida: campo chave, pdf_base64/xml_base64, rota por XML e downloads dos artefatos."
+  ]
+}

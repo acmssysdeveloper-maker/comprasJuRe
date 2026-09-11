@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const src=fs.readFileSync(new URL('../modules/receipt-engine.js',import.meta.url),'utf8');
+const ctx={window:{},globalThis:{},console};ctx.window=ctx.window;vm.createContext(ctx);vm.runInContext(src,ctx);
+const e=ctx.window.ReceiptEngine;
+const key='35260444823938000187551090000002691092067649';
+assert.equal(e.keyCheckDigit(key),true);
+const qr=`https://consultadfe.fazenda.rj.gov.br/consultaNFCe/QRCode?p=${key}|2|1`;
+const parsed=e.parseQr(qr);
+assert.equal(parsed.key,key);
+assert.equal(parsed.validKey,true);
+assert.match(parsed.url,/consultadfe\.fazenda\.rj\.gov\.br/);
+console.log('NFC-e camera parser test: PASS');
