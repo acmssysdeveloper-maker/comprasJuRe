@@ -1,0 +1,421 @@
+   setImportStatus("working","Etapa 3 de 4 — validando leitura","Conferindo itens, valores, total e consistência matemática antes de mostrar os dados.");
+   if(!pendingImport?.items?.length) throw new Error("Nenhuma linha de item foi identificada com segurança.");
+   pendingImport.validation=validateReceiptData(pendingImport);
+   renderReceiptEditor(pendingImport);
+   $("#saveImportRow").classList.remove("hidden");
+   const v=pendingImport.validation;
+   if(v.ok){
+     $("#receiptConfidence").textContent=`${Math.round(clamp(num(pendingImport.confidence)||.8)*100)}% confiança`;
+     $("#receiptConfidence").className="badge good";
+     setImportStatus("success","Etapa 4 de 4 — leitura concluída",`Foram identificados ${pendingImport.items.length} itens e a soma das linhas concilia com o total informado. Revise e salve.`);
+   }else{
+     $("#receiptConfidence").textContent="revisão necessária";
+     $("#receiptConfidence").className="badge warn";
+     setImportStatus("warn","Etapa 4 de 4 — Leitura parcial — revisão necessária",v.message,"A leitura terminou, mas o sistema não considera esses dados prontos para gravação sem sua conferência.");
+   }
+   stopImportClock();
+ }catch(e){
+   console.error("Receipt import failed:",e);
+   pendingImport=null;
+   $("#receiptEditor").className="editor empty";
+   $("#receiptEditor").textContent="Nenhum dado confiável foi produzido.";
+   $("#receiptConfidence").textContent="falhou";
+   $("#receiptConfidence").className="badge warn";
+   setImportStatus("error","Leitura não concluída",importErrorMessage(e),`Detalhe técnico: ${String(e?.message||e)}`);
+   stopImportClock();
+   toast("A leitura não foi concluída.");
+ }finally{
+   $("#ocrBtn").disabled=false;$("#geminiReceiptBtn").disabled=false;
+   $("#ocrBtn").textContent="Ler comprovante — motor anti-falhas";$("#geminiReceiptBtn").textContent="IA visual complementar";
+ }
+}
+async function loadTesseract(){
+ if(window.Tesseract)return window.Tesseract;
+ return new Promise((resolve,reject)=>{
+   const script=document.createElement("script");
+   script.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+   script.crossOrigin="anonymous";
+   const timer=setTimeout(()=>{script.remove();reject(new Error("OCR indisponível sem conexão"))},30000);
+   script.onload=()=>{clearTimeout(timer);window.Tesseract?resolve(window.Tesseract):reject(new Error("OCR não carregou"))};
+   script.onerror=()=>{clearTimeout(timer);script.remove();reject(new Error("Falha ao carregar OCR"))};
+   document.head.appendChild(script);
+ });
+}
+function clamp01(x){return Math.max(0,Math.min(1,Number(x)||0))}
+function canvasToBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error("Não foi possível preparar a imagem para OCR")),"image/png",1))}
+function grayscaleAndEnhance(ctx,w,h,mode="adaptive"){
+ const data=ctx.getImageData(0,0,w,h),d=data.data;
+ let min=255,max=0;
+ const gray=new Uint8Array(w*h);
+ for(let i=0,p=0;i<d.length;i+=4,p++){
+   const g=Math.round(.299*d[i]+.587*d[i+1]+.114*d[i+2]);
+   gray[p]=g; if(g<min)min=g;if(g>max)max=g;
+ }
+ const span=Math.max(1,max-min);
+ if(mode==="contrast"){
+   for(let p=0,i=0;p<gray.length;p++,i+=4){let g=(gray[p]-min)*255/span; g=g<118?0:255; d[i]=d[i+1]=d[i+2]=g; d[i+3]=255;}
+ }else if(mode==="soft"){
+   for(let p=0,i=0;p<gray.length;p++,i+=4){let g=(gray[p]-min)*255/span; g=Math.max(0,Math.min(255,(g-128)*1.45+128)); d[i]=d[i+1]=d[i+2]=g; d[i+3]=255;}
+ }else{
+   // Local thresholding: receipt paper is rarely uniformly lit.
+   const cell=36, cols=Math.ceil(w/cell), rows=Math.ceil(h/cell), sums=new Float64Array(cols*rows), counts=new Uint32Array(cols*rows);
+   for(let y=0;y<h;y++){const cy=Math.floor(y/cell);for(let x=0;x<w;x++){const cx=Math.floor(x/cell),k=cy*cols+cx;sums[k]+=gray[y*w+x];counts[k]++;}}
+   for(let k=0;k<sums.length;k++)sums[k]/=counts[k]||1;
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){const k=Math.floor(y/cell)*cols+Math.floor(x/cell);const local=sums[k];const g=gray[y*w+x];const v=g<(local-8)?0:255;const i=(y*w+x)*4;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}
+ }
+ ctx.putImageData(data,0,0);
+}
+function sharpenCanvas(ctx,w,h){
+ const src=ctx.getImageData(0,0,w,h),out=ctx.createImageData(w,h),a=src.data,b=out.data;
+ for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+   const i=(y*w+x)*4;
+   for(let c=0;c<3;c++){
+     const v=5*a[i+c]-a[i-4+c]-a[i+4+c]-a[i-w*4+c]-a[i+w*4+c];
+     b[i+c]=Math.max(0,Math.min(255,v));
+   }
+   b[i+3]=255;
+ }
+ ctx.putImageData(out,0,0);
+}
+async function renderOcrCrop(file,top,bottom,scale=4){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=async()=>{try{const w=Math.min(3600,Math.round(img.naturalWidth*scale)),h=Math.round(img.naturalHeight*(bottom-top)*scale),c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d",{willReadFrequently:true});ctx.drawImage(img,0,img.naturalHeight*top,img.naturalWidth,img.naturalHeight*(bottom-top),0,0,w,h);grayscaleAndEnhance(ctx,w,h,"soft");sharpenCanvas(ctx,w,h);resolve(await canvasToBlob(c));URL.revokeObjectURL(url)}catch(e){URL.revokeObjectURL(url);reject(e)}};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("Falha ao abrir imagem para OCR"))};img.src=url})}
+async function preprocessReceiptImage(file){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=async()=>{try{const maxW=3600,scale=Math.min(4,Math.max(2.8,maxW/img.naturalWidth)),w=Math.round(img.naturalWidth*scale),h=Math.round(img.naturalHeight*scale),variants=[];for(const mode of ["soft","contrast","adaptive"]){const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d",{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.drawImage(img,0,0,w,h);grayscaleAndEnhance(ctx,w,h,mode);if(mode!=="adaptive")sharpenCanvas(ctx,w,h);variants.push({blob:await canvasToBlob(c),label:mode})}URL.revokeObjectURL(url);resolve(variants)}catch(e){URL.revokeObjectURL(url);reject(e)}};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("A imagem do comprovante não pôde ser aberta"))};img.src=url})}
+async function ocrRecognize(input,label,psm,T){setImportStatus("working",`Etapa 2 de 4 — OCR (${label})`,"Lendo o comprovante em múltiplos modos para recuperar texto, números e linhas parcialmente degradadas.");const r=await T.recognize(input,"por",{logger:m=>{if(m.status==="recognizing text"){const pct=Math.round(m.progress*100);$("#ocrBtn").textContent=`OCR ${pct}%`;$("#importStatusText").textContent=`Lendo o comprovante… ${pct}%`}},config:{tessedit_pageseg_mode:String(psm),preserve_interword_spaces:"1",user_defined_dpi:"300"}});return {text:r.data?.text||"",data:r.data||{}}}
+function normalizeFiscalKey(v){return String(v||'').replace(/\D/g,'').slice(0,44)}
+function setFiscalKey(key,source='OCR/QR'){
+ const k=normalizeFiscalKey(key), input=$('#fiscalKey'); if(!input)return '';
+ input.value=k;
+ const valid=k.length===44 && window.ReceiptEngine?.keyCheckDigit?.(k);
+ $('#consultFiscalBtn').disabled=!valid; $('#openDanfeBtn').disabled=!valid;
+ $('#fiscalKeyStatus').textContent=valid?`Chave encontrada (${source}) e validada pelo dígito verificador.`:'Chave ainda não validada.';
+ return valid?k:'';
+}
+let lastFiscalUpstream=null,lastFiscalXml='';
+function showFiscalArtifacts(j,sourceLabel){
+ const f=j?.data||{};lastFiscalUpstream=j?.upstream||f.raw||j||null;lastFiscalXml=f.xml||'';
+ const row=$('#fiscalArtifactRow');if(!row)return;row.classList.remove('hidden');
+ $('#fiscalArtifactStatus').textContent=`Artefatos fiscais disponíveis (${sourceLabel}).`;
+ $('#downloadFiscalPdfBtn').disabled=!f.pdf;
+ $('#downloadFiscalXmlBtn').disabled=!f.xml;
+ $('#downloadFiscalJsonBtn').disabled=!lastFiscalUpstream;
+}
+function downloadTextFile(value,name,mime='application/json'){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type:mime});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function safeFileStem(keyOrName){return String(keyOrName||'documento-fiscal').replace(/[^A-Za-z0-9._-]+/g,'_').slice(0,80)||'documento-fiscal'}
+function downloadFiscalArtifacts(){
+ $('#downloadFiscalPdfBtn').onclick=()=>{const f=lastFiscalUpstream?.pdf_base64||lastFiscalUpstream?.data?.pdf_base64||lastFiscalUpstream?.pdf||null;const n=(lastFiscalUpstream?.chave||$('#fiscalKey')?.value||'danfe')+'-danfe.pdf';if(f)downloadDataUrl(f,n,'application/pdf');};
+ $('#downloadFiscalXmlBtn').onclick=()=>{const f=lastFiscalUpstream?.xml_base64||lastFiscalUpstream?.xml||lastFiscalUpstream?.data?.xml||lastFiscalXml;if(f){if(/^[A-Za-z0-9+/=\s]+$/.test(String(f))&&!String(f).trim().startsWith('<')){try{downloadTextFile(atob(String(f).replace(/\s+/g,'')),safeFileStem(lastFiscalUpstream?.chave||$('#fiscalKey')?.value)+'.xml','application/xml');return}catch{}}downloadTextFile(f,safeFileStem(lastFiscalUpstream?.chave||$('#fiscalKey')?.value)+'.xml','application/xml')}};
+ $('#downloadFiscalJsonBtn').onclick=()=>{if(lastFiscalUpstream)downloadTextFile(lastFiscalUpstream,safeFileStem(lastFiscalUpstream?.chave||$('#fiscalKey')?.value)+'.json','application/json')};
+}
+async function applyFiscalResult(j,key,routeLabel){
+ const f=j.data||{}; const local=pendingImport||{};
+ const merged={...local,market:{...(local.market||{}),...(f.market||{})},date:f.date||local.date,time:f.time||local.time,total:(Number(f.total)||0)||local.total,items:f.items?.length?f.items:local.items,discountTotal:f.discountTotal??local.discountTotal,nfceKey:key||f.fiscalKey||local.nfceKey,sourceEngine:'fiscal-api',fiscalSource:'consultadanfe',fiscalVerified:true,fiscalRoute:j.route||routeLabel, fiscalDocumentType:f.documentType||'nfe',fiscalRaw:j.upstream||f.raw||null};
+ pendingImport=merged;renderReceiptEditor(merged);$('#receiptConfidence').textContent='fiscal confirmado';$('#saveImportRow').classList.remove('hidden');showFiscalArtifacts(j,routeLabel);
+ return merged;
+}
+async function consultFiscalKey(){
+ const key=setFiscalKey($('#fiscalKey')?.value||'','campo manual'); if(!key)return toast('Informe uma chave fiscal válida de 44 dígitos.');
+ if(location.protocol==='file:'){ setImportStatus('warn','Servidor local não está ativo','Abra o aplicativo pelo start-local.bat para usar a consulta fiscal. O navegador bloqueia fetch para /api quando o index.html é aberto como arquivo.'); toast('Abra o JuRe pelo start-local.bat.'); return; }
+ setImportStatus('working','Consultando documento fiscal','Usando a rota por chave da Consulta DANFE. O OCR não será usado como verdade quando a resposta fiscal estiver disponível.');
+ try{const r=await fetch('/api/fiscal/consult',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error((j.code?`${j.code}: `:'')+(j.error||'Consulta fiscal indisponível'));
+   const merged=await applyFiscalResult(j,key,'consulta por chave');
+   setImportStatus('success','Documento fiscal confirmado','A chave e os artefatos oficiais foram recebidos. O OCR permanece somente como apoio.');
+   downloadFiscalArtifacts();toast(`Nota fiscal consultada. Rota: ${merged.fiscalRoute}.`);
+ }catch(e){setImportStatus('warn','Consulta por chave não concluída',String(e.message||e));toast('A consulta fiscal por chave não pôde ser concluída.');}
+}
+async function sendFiscalXml(){
+ const file=$('#fiscalXmlFile')?.files?.[0];if(!file)return toast('Selecione um arquivo XML fiscal.');
+ if(location.protocol==='file:'){ setImportStatus('warn','Servidor local não está ativo','Abra o aplicativo pelo start-local.bat para enviar XML à API fiscal.'); toast('Abra o JuRe pelo start-local.bat.'); return; }
+ if(file.size>5*1024*1024)return toast('O XML excede o limite de 5 MB.');
+ setImportStatus('working','Enviando XML fiscal','Usando a segunda rota /danfe. Esta rota não depende do OCR nem da janela de datas da consulta por chave.');
+ try{
+  const b64=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||'').split(',').pop());r.onerror=()=>reject(new Error('Falha ao ler o XML.'));r.readAsDataURL(file)});
+  const r=await fetch('/api/fiscal/danfe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:file.name,mimeType:file.type||'application/xml',data:b64})});
+  const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error((j.code?`${j.code}: `:'')+(j.error||'Geração do DANFE por XML indisponível'));
+  const key=normalizeFiscalKey(j?.data?.fiscalKey||j?.upstream?.chave||'');
+  await applyFiscalResult(j,key,'XML');
+  if(key)setFiscalKey(key,'XML fiscal');
+  setImportStatus('success','XML fiscal confirmado','O DANFE/JSON foi recebido diretamente da camada fiscal. Não depende de leitura OCR.');downloadFiscalArtifacts();toast('XML processado e artefatos fiscais disponíveis.');
+ }catch(e){setImportStatus('warn','Processamento do XML não concluído',String(e.message||e));toast('O XML não pôde ser processado.');}
+}
+function downloadDataUrl(value,name,mime='application/octet-stream'){try{const s=String(value||'');if(/^https?:\/\//i.test(s)){window.open(s,'_blank','noopener');return}const href=s.startsWith('data:')?s:`data:${mime};base64,${s.replace(/[^A-Za-z0-9+/=]/g,'')}`;const a=document.createElement('a');a.href=href;a.download=name;a.click()}catch{}}
+async function openDanfeOfficial(){
+ const key=setFiscalKey($('#fiscalKey')?.value||'','campo manual'); if(!key)return;
+ try{await navigator.clipboard?.writeText(key)}catch{}
+ window.open('https://consultadanfe.com/api','_blank','noopener');
+ setFiscalKey(key,'chave confirmada'); setImportStatus('success','Chave pronta para Consulta DANFE','A chave de 44 dígitos foi copiada para a área de transferência e a página oficial foi aberta.');
+}
+
+async function ocrReadReceipt(file){
+ if(!window.ReceiptEngine?.run)throw new Error('Motor OCR anti-falhas não carregado.');
+ const cascade=await window.ReceiptEngine.run(file,{loadTesseract,onProgress:p=>{const pct=Math.round(p*100);$('#ocrBtn').textContent=`OCR ${pct}%`;$('#importStatusText').textContent=`Leitura anti-falhas… ${pct}%`}});
+ const candidates=cascade.readings.filter(r=>r.source==='tesseract'&&r.text).map((r,i)=>{const p=parseReceiptText(r.text);return {...p,_ocrText:r.text,_ocrRank:i,source:r.source,sourceLabel:r.label,ocrConfidence:r.confidence||0,ocrRegion:r.region||'full'}});
+ const parsed=dedupeReceiptCandidates(candidates);
+ const merged=reconcileReceiptCandidates(parsed);
+ merged.ocrPasses=candidates.length;merged.ocrErrors=cascade.errors;merged.qrEvidence=cascade.qr||null;merged.ocrAudit=cascade.audit||null;
+ if(cascade.qr?.key){merged.nfceKey=cascade.qr.key;merged.sefazUrl=cascade.qr.url}
+ if(!merged.nfceKey){for(const c of candidates){const k=window.ReceiptEngine?.extractKeyFromText?.(c._ocrText||c.text||'');if(k){merged.nfceKey=k;merged.fiscalKeySource='ocr';break}}}
+ if(merged.nfceKey)setFiscalKey(merged.nfceKey, cascade.qr?.key?'QR NFC-e':'OCR');
+ return merged;
+}
+function itemSimilarity(a,b){
+ let s=0;const an=normalize(String(a?.name||'')),bn=normalize(String(b?.name||''));
+ if(a?.barcode&&b?.barcode&&String(a.barcode).replace(/\D/g,'')===String(b.barcode).replace(/\D/g,''))s+=.55;
+ if(an&&bn){if(an===bn)s+=.35;else{const aa=new Set(an.split(' ')),bb=new Set(bn.split(' '));const inter=[...aa].filter(x=>bb.has(x)).length,union=new Set([...aa,...bb]).size;s+=.30*(inter/Math.max(1,union));}}
+ if(a?.total&&b?.total&&Math.abs(num(a.total)-num(b.total))<=.03)s+=.25;
+ if(a?.quantity&&b?.quantity&&Math.abs(num(a.quantity)-num(b.quantity))<=.001)s+=.10;
+ return Math.min(1,s);
+}
+function dedupeReceiptCandidates(candidates){
+ return (candidates||[]).filter(c=>c.items?.length).sort((a,b)=>receiptStructuralScore(b)+(b.ocrConfidence||0)*8-(receiptStructuralScore(a)+(a.ocrConfidence||0)*8)).slice(0,12);
+}
+function reconcileReceiptCandidates(candidates){
+ const ordered=[...(candidates||[])],best=ordered[0]||parseReceiptText(''),clusters=[];
+ for(const c of ordered){for(const item of (c.items||[])){let hit=clusters.find(cl=>cl.items.some(x=>itemSimilarity(x,item)>=.62));if(!hit){hit={items:[],sources:new Set};clusters.push(hit)}hit.items.push(item);hit.sources.add(c.sourceLabel||'ocr')}}
+ const items=[];
+ for(const cl of clusters){
+  const xs=cl.items.slice().sort((a,b)=>(a.confidence||0)-(b.confidence||0)),seed={...(xs[xs.length-1]||{})},out=seed;
+  for(const x of xs){if(!out.barcode&&x.barcode)out.barcode=x.barcode;if(!out.name&&x.name)out.name=x.name;if(!num(out.quantity)&&num(x.quantity))out.quantity=x.quantity;if(!num(out.unitPrice)&&num(x.unitPrice))out.unitPrice=x.unitPrice;if(!num(out.total)&&num(x.total))out.total=x.total;if(!out.unit&&x.unit)out.unit=x.unit;if(!out.pack&&x.pack)out.pack=x.pack}
+  out.confidence=Math.min(1,(cl.items.reduce((a,x)=>a+num(x.confidence),0)/Math.max(1,cl.items.length))+Math.min(.15,(cl.sources.size-1)*.05));out.needsReview=cl.sources.size<2||out.confidence<.82;items.push(out);
+ }
+ const vote=arr=>{const m=new Map();for(const v of arr.filter(Boolean))m.set(v,(m.get(v)||0)+1);return [...m.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||''};
+ const totals=ordered.map(c=>num(c.total)).filter(v=>v>0),dateVotes=ordered.map(c=>c.date),cnpjVotes=ordered.map(c=>c.market?.cnpj),nameVotes=ordered.map(c=>c.market?.name);
+ const totalVote=vote(totals.map(v=>v.toFixed(2)));
+ const d={...best,items,market:{...(best.market||{})}};d.total=totalVote?Number(totalVote):num(best.total);d.date=vote(dateVotes)||best.date;d.market={name:vote(nameVotes)||best.market?.name||'Mercado não identificado',cnpj:vote(cnpjVotes)||best.market?.cnpj||''};
+ d.itemCountEvidence=items.length;d.evidenceCoverage=Math.min(1,items.filter(i=>i.name&&num(i.total)>0).length/Math.max(1,d.itemCountDeclared||items.length));d.ocrConsensus=items.length?items.filter(i=>num(i.confidence)>=.82).length/items.length:0;
+ d.confidence=Math.min(1,.35*d.ocrConsensus+.25*d.evidenceCoverage+.20*(d.market.cnpj?1:0)+.20*(d.date&&d.total?1:0));d.needsReview=true;d.cascadeSources=ordered.map(c=>({label:c.sourceLabel||'ocr',items:c.items?.length||0,confidence:c.ocrConfidence||0}));
+ return d;
+}
+
+function scoreOCRText(text){
+ const t=String(text||"");
+ return (t.match(/\b\d{4,14}\b/g)||[]).length*3+(t.match(/\d+[,.]\d{2}/g)||[]).length*2+(t.match(/\d{2}[\/.\-]\d{2}[\/.\-]\d{2,4}/g)||[]).length*4+t.length/10000;
+}
+function receiptStructuralScore(d){
+ const items=Array.isArray(d?.items)?d.items:[];let s=items.length*4;
+ if(d?.market?.name&&d.market.name!=="Mercado não identificado")s+=4;if(d?.market?.cnpj)s+=6;if(d?.date)s+=4;if(num(d?.total)>0)s+=5;
+ const sum=round2(items.reduce((a,i)=>a+num(i.total)-num(i.discount),0));if(num(d?.total)>0)s+=Math.max(0,8-Math.min(8,Math.abs(sum-num(d.total))*2));
+ s+=items.filter(i=>num(i.unitPrice)>0&&num(i.total)>0).length*1.5;
+ return s;
+}
+function receiptLineSum(d){return round2((d.items||[]).reduce((a,i)=>a+num(i.total)-num(i.discount),0))}
+function normalizeOcrNumeric(s){return String(s||"").replace(/[Oo]/g,"0").replace(/[Il|]/g,"1").replace(/[Ss]/g,"5").replace(/[Bb]/g,"8").replace(/[Zz]/g,"2").replace(/[Gg]/g,"6").replace(/\s+/g,"")}
+function moneyTokens(s){return String(s||"").match(/-?(?:\d{1,3}(?:[.\s]\d{3})*[.,]\d{2}|\d+[.,]\d{2})/g)||[]}
+function receiptNum(v){const x=String(v??"").trim().replace(/R\$\s*/gi,"").replace(/\s/g,"");if(!x)return 0;if(x.includes(","))return Number(x.replace(/\./g,"").replace(",","."))||0;if((x.match(/\./g)||[]).length===1)return Number(x)||0;if((x.match(/\./g)||[]).length>1)return Number(x.replace(/\./g,""))||0;return Number(x)||0}
+function numericTokens(s){return String(s||"").match(/\b\d{3,14}\b/g)||[]}
+function validCnpjDigits(d){
+ const x=String(d||"").replace(/\D/g,"");if(x.length!==14||/^([0-9])\1{13}$/.test(x))return false;
+ const calc=(n)=>{let sum=0,weight=n===12?5:6;for(let i=0;i<n;i++,weight--){if(weight===1)weight=9;sum+=Number(x[i])*weight}const r=sum%11;return r<2?0:11-r};
+ return calc(12)===Number(x[12])&&calc(13)===Number(x[13]);
+}
+function repairCnpjCandidate(raw){
+ const d=normalizeOcrNumeric(raw).replace(/\D/g,"");if(validCnpjDigits(d))return canonicalCnpj(d);
+ if(d.length!==14)return "";
+ const maps={0:"123456789",1:"023456789",2:"013456789",3:"012456789",4:"012356789",5:"012346789",6:"012345789",7:"012345689",8:"012345679",9:"012345678"};
+ let frontier=[d];const seen=new Set([d]);
+ for(let depth=1;depth<=1;depth++){const next=[];for(const cur of frontier){for(let i=0;i<cur.length;i++){for(const r of(maps[cur[i]]||"")){if(r===cur[i])continue;const a=cur.split("");a[i]=r;const candidate=a.join("");if(seen.has(candidate))continue;seen.add(candidate);if(validCnpjDigits(candidate))return canonicalCnpj(candidate);next.push(candidate)}}}frontier=next;}
+ return "";
+}
+function extractReceiptCode(line){
+ const toks=String(line||"").match(/[A-Za-z0-9]{3,16}/g)||[];
+ const candidates=[];
+ for(const tok of toks){
+   const fixed=normalizeOcrNumeric(tok).replace(/^[A-Za-z]+/,"").replace(/[A-Za-z]+$/g,"");
+   if(!/^\d{3,14}$/.test(fixed))continue;
+   const ratio=(fixed.match(/\d/g)||[]).length/tok.length;
+   if(ratio<.45)continue;
+   candidates.push({fixed,index:line.indexOf(tok),len:fixed.length});
+ }
+ candidates.sort((a,b)=>(b.len-a.len)||((a.index||0)-(b.index||0)));
+ const first=candidates.find(x=>x.len>=8)||candidates[0];return first||null;
+}
+function extractMerchantIdentity(lines){
+ const reject=/^(cnpj|cpf|documento|cupom|nota|fiscal|consumidor|endereco|avenida|av\.|rua|r\.|fone|tel|telefone|saquarema|data|hora|codigo|descricao|qtde|qtd|forma|pagamento|venda|valor|total|desconto)/i;
+ const rows=[];for(let i=0;i<Math.min(lines.length,18);i++){const raw=lines[i].raw.replace(/\s+/g,' ').trim();if(!raw||reject.test(raw))continue;let score=0;
+  if(/supermercad|mercado|hipermercad|atacad|alvorada|drogaria|farm[aá]cia|farmacia|padaria|hortifruti|emporio|loja/i.test(raw))score+=8;
+  if(/eireli|ltda|sa\b|s\.a\.|mei\b/i.test(raw))score+=2;if(raw.length>=6&&raw.length<=70)score+=2;
+  if(score)rows.push({i,raw,score});
+ }
+ rows.sort((a,b)=>b.score-a.score||a.i-b.i);const hit=rows[0];if(!hit)return{name:'',merchantType:''};let name=hit.raw;
+ if(hit.i>0 && /^(supermercad|mercad|drogaria|farm[aá]cia|farmacia|padaria|hiper|atacad)/i.test(lines[hit.i-1].raw) && !/cnpj|cpf/i.test(lines[hit.i-1].raw))name=lines[hit.i-1].raw+' '+name;
+ name=name.replace(/^.*?(?:SUPER)?MERCAD(?:O|OS)?\s+/i,m=>'').trim()||hit.raw;
+ const type=/drogaria|farm[aá]cia|farmacia/i.test(name)?'drogaria':/padaria/i.test(name)?'padaria':/hortifruti/i.test(name)?'hortifruti':/atacad/i.test(name)?'atacarejo':'supermercado';
+ // Do not consume an adjacent "SA"/"S.A." token; preserve municipality names such as SÃO.
+ name=name.replace(/\s{2,}/g,' ').trim();return{name,merchantType:type};
+}
+function normalizeReceiptName(s){return normalize(String(s||'')).replace(/\b(?:REFRIG|REFRESC|MIST|PRES|ABS|PAP|LAU|AMAC|ACUC|BISC|OVOS|PAO|FAR)\b/g,'').replace(/\s+/g,' ').trim()}
+function inferProductCategory(name){const n=normalize(name);if(/BEBIDA|REFRIG|VINHO|REFRESC|COCA|ANTARCT|MAGUARY/.test(n))return'Bebidas';if(/PAPEL|ABSORVENT|HIGIEN/.test(n))return'Higiene';if(/AMAC|OMO|LIMPE/.test(n))return'Limpeza';if(/BOLO|PIPOCA|FARINHA|BISCOITO|ACUCAR|EMPANAR|MIST/.test(n))return'Mercearia';if(/OVOS|LEITE|QUEIJO|MARGARINA/.test(n))return'Laticínios';if(/PRESUNTO|QUEIJO PRATO|FRIOS/.test(n))return'Frios';if(/PAO|PADARIA/.test(n))return'Padaria';if(/MACA|BANANA|FRUTA|HORTI/.test(n))return'Hortifruti';return'Outros'}
+function isValidGtin(code){const d=String(code||'').replace(/\D/g,'');if(d.length===4)return true;if(![8,12,13,14].includes(d.length))return false;let sum=0;for(let i=d.length-2,j=0;i>=0;i--,j++){const n=Number(d[i]);sum+=n*(j%2===0?3:1)}return((10-(sum%10))%10)===Number(d[d.length-1])}
+function bestMoneyPair(tokens,quantity){
+ const vals=tokens.map(receiptNum).filter(v=>v>0&&v<100000);if(vals.length<2)return null;let best=null;for(let a=0;a<vals.length;a++)for(let b=a+1;b<vals.length;b++){const x=vals[a],y=vals[b];const pairs=[[x,y],[y,x]];for(const [unitPrice,lineTotal] of pairs){const q=Number(quantity)||1,res=Math.abs(q*unitPrice-lineTotal);const score=res<=0.03?0:res;const candidate={unitPrice,lineTotal,score};if(!best||score<best.score)best=candidate}}return best}
+function parseReceiptText(text){
+ const rawLines=String(text||'').split(/\r?\n/).map(x=>x.replace(/[\t ]+/g,' ').trim()).filter(Boolean);const lines=rawLines.map((raw,idx)=>({raw,norm:raw.replace(/\s+/g,' ').trim(),idx}));const joined=lines.map(x=>x.raw).join(' ');
+ let cnpj='';for(const l of lines){const cand=(l.raw.match(/(?:\d\s*){14}/)?.[0]||l.raw.match(/\d{2}[.\s-]?\d{3}[.\s-]?\d{3}[\/\s-]?\d{4}[-\s]?\d{2}/)?.[0]);if(cand){const fixed=repairCnpjCandidate(cand);if(fixed){cnpj=fixed;break}}}
+ const dateMatches=joined.match(/\b\d{2}[\/\.\-]\d{2}[\/\.\-]\d{2,4}\b/g)||[];const date=normalizeReceiptDate(dateMatches.find(x=>/^(0?[1-9]|[12]\d|3[01])[\/\.\-](0?[1-9]|1[0-2])/.test(x))||dateMatches[0]||'');const tm=joined.match(/\b([01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/);const time=tm?tm[0]:'';
+ const merchant=extractMerchantIdentity(lines);const total=extractReceiptLabeledValue(lines,[/valor\s*a\s*pagar/i,/valor\s*pago/i,/total\s*a\s*pagar/i,/^total/i]);const discountTotal=extractReceiptLabeledValue(lines,[/desconto/i])||0;const paymentLine=lines.find(x=>/cart[aã]o\s+(?:de\s+)?d[eé]bito|cr[eé]dito|pix|dinheiro|vale/i.test(x.raw));
+ let declaredItemCount=0;for(const l of lines){const m=l.raw.match(/(?:qtde\.?|qtd\.?|quantidade)\s*total\s*de\s*itens[^0-9]*(\d{1,3})/i);if(m){declaredItemCount=Number(m[1]);break}}
+ const cutoff=lines.findIndex(x=>/qtde\.?\s*total|valor\s*a\s*pagar|forma\s*pagamento/i.test(x.raw));const body=lines.slice(0,cutoff>0?cutoff:lines.length);const products=[];
+ for(let i=0;i<body.length;i++){
+  const line=body[i].raw;if(/^(CNPJ|DATA|DOCUMENTO|DOC|CODIGO|DESCRICAO|VALOR|FORMA|VENDA|CONSUMIDOR|SUPERMERC|AVENIDA|RUA|FONE)/i.test(line))continue;
+  const first=extractReceiptCode(line);if(!first)continue;if(first.len<4)continue;const barcode=first.fixed;if(first.len>=8&&!isValidGtin(barcode)){
+    // Keep OCR candidates that are close to a real GTIN, but lower confidence rather than discarding them.
+  }
+  const tokenMatch=line.slice(first.index||0).match(/^[A-Za-z0-9]+/);const offset=(first.index||0)+(tokenMatch?.[0]?.length||0);let nameLine=stripReceiptNumericTail(line.slice(offset).trim());
+  const window=body.slice(i,Math.min(body.length,i+4)).map(x=>x.raw);const wtext=window.join(' ');const qtyMatch=wtext.match(/\b(\d+(?:[\.,]\d+)?)\s*(UN|UND|KG|L|ML|G)\b/i);const qty=qtyMatch?receiptNum(qtyMatch[1]):0;const unit=qtyMatch?normalizeUnit(qtyMatch[2]):'un';const pair=bestMoneyPair(moneyTokens(wtext),qty||1);if(!pair)continue;
+  if(!nameLine||/^(desconto|valor|total|cart[aã]o|pix)$/i.test(nameLine))continue;let discount=0;for(let j=i+1;j<Math.min(body.length,i+3);j++){const dm=body[j].raw.match(/(?:desconto[^0-9]*)?(\-?\d+[\.,]\d{2})\s*$/i);if(/desconto/i.test(body[j].raw)&&dm){discount=Math.abs(receiptNum(dm[1]));break}}
+  products.push({barcode,name:cleanProductName(nameLine),quantity:qty||1,unit,unitPrice:pair.unitPrice,total:pair.lineTotal,discount,brand:'',category:inferProductCategory(nameLine),pack:guessPack(nameLine),needsReview:true,confidence:pair.score<=0.03?.76:.52,sourceLine:i,gtinValid:isValidGtin(barcode)});
+ }
+ const dedup=[];for(const it of products){const same=dedup.find(x=>(it.barcode&&x.barcode===it.barcode&&Math.abs((it.total||0)-(x.total||0))<0.01&&Math.abs((it.quantity||0)-(x.quantity||0))<0.001&&normalizeReceiptName(it.name)===normalizeReceiptName(x.name)));if(!same)dedup.push(it)}
+ const lineSum=round2(dedup.reduce((a,i)=>a+num(i.total)-num(i.discount),0));let confidence=.05;if(dedup.length)confidence+=.35;if(total)confidence+=.15;if(cnpj)confidence+=.15;if(date)confidence+=.1;if(declaredItemCount&&Math.abs(declaredItemCount-dedup.length)<=1)confidence+=.1;if(total&&Math.abs(lineSum-total)<=.05)confidence+=.1;
+ return {market:{name:merchant.name||'Mercado não identificado',cnpj},merchantType:merchant.merchantType,date,time,total,discountTotal,paymentMethod:paymentLine?.raw||'',items:dedup,itemCountDeclared:declaredItemCount,confidence:Math.max(0,Math.min(1,Number(confidence)||0)),rawText:text,needsReview:true};
+}
+function stripReceiptNumericTail(s){
+ return String(s||"").replace(/\s+(?:\d+[.,]\d{2}\s+){1,2}-?\d+[.,]\d{2}\s*$/," ").replace(/\s+\d+[.,]\d{2}\s+\d+[.,]\d{2}\s*$/," ").trim();
+}
+function normalizeUnit(u){const x=String(u||"").toUpperCase();return x==="UND"?"un":x.toLowerCase()}
+function extractReceiptLabeledValue(lines,patterns){
+ for(let i=lines.length-1;i>=0;i--){if(patterns.some(r=>r.test(lines[i].raw))){const toks=moneyTokens(lines[i].raw);if(toks.length)return Math.abs(receiptNum(toks[toks.length-1]));for(let j=i+1;j<Math.min(lines.length,i+4);j++){const t=moneyTokens(lines[j].raw);if(t.length)return Math.abs(receiptNum(t[t.length-1]));}}}
+ const joined=lines.map(x=>x.raw).join(" ");for(const r of patterns){const m=joined.match(new RegExp(r.source+"[^0-9]{0,40}(-?(?:\\d{1,3}(?:[.\\s]\\d{3})*[.,]\\d{2}|\\d+[.,]\\d{2}))","i"));if(m)return Math.abs(receiptNum(m[1]));}
+ if(patterns.some(r=>/desconto/i.test(r.source)))return 0;
+ const footer=lines.slice(Math.max(0,Math.floor(lines.length*.72))).flatMap(x=>moneyTokens(x.raw)).map(receiptNum).filter(v=>v>0&&v<100000);return footer.length?Math.max(...footer):0;
+}
+function extractReceiptValuesRobust(s){
+ const str=String(s||"");const monies=moneyTokens(str);if(monies.length<2)return null;
+ const last=monies.slice(-2).map(v=>Math.abs(receiptNum(v)));let unitPrice=last[0],lineTotal=last[1];
+ const qm=str.match(/\b(\d+(?:[.,]\d+)?)\s*(UN|UND|KG|L|ML|G)\b/i);const quantity=qm?receiptNum(qm[1]):0,unit=qm?normalizeUnit(qm[2]):"un";
+ if(quantity&&Math.abs(quantity*unitPrice-lineTotal)>0.03&&Math.abs(quantity*lineTotal-unitPrice)<=0.03)[[unitPrice,lineTotal],[lineTotal,unitPrice]]=[ [lineTotal,unitPrice] ];
+ return {quantity,unit,unitPrice,lineTotal,discount:0,confidence:quantity?0.72:0.58};
+}
+function canonicalCnpj(value){const digits=String(value||"").replace(/\D/g,"");return digits.length===14?digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"):""}
+function normalizeReceiptDate(value){const m=String(value||"").match(/(\d{2})[\/.\-](\d{2})[\/.\-](\d{2,4})/);if(!m)return "";let y=m[3];if(y.length===2)y=(Number(y)<50?"20":"19")+y;return `${y}-${m[2]}-${m[1]}`}
+function extractReceiptValues(s){return extractReceiptValuesRobust(s)}
+function validateReceiptData(d){
+ const items=Array.isArray(d?.items)?d.items:[],total=num(d?.total),lineSum=receiptLineSum(d),missing=items.filter(i=>!i.name||num(i.total)<=0).length;
+ if(!items.length)return {ok:false,message:'Nenhum item foi identificado com segurança. O sistema não vai preencher a compra com dados de outro registro.'};
+ if(missing)return {ok:false,message:`${missing} item(ns) ficaram sem nome ou valor de linha confiável. Confira esses campos antes de salvar.`};
+ if(total<=0)return {ok:false,message:'O total da compra não foi identificado. Confira o total no documento antes de salvar.'};
+ if(d.market?.cnpj && !validCnpjDigits(d.market.cnpj))return {ok:false,message:'O CNPJ identificado não passou na validação dos dígitos verificadores. Confira o cabeçalho do comprovante.'};
+ if(d.itemCountDeclared && Number(d.itemCountDeclared)!==items.length)return {ok:false,message:`O comprovante declara ${d.itemCountDeclared} itens, mas a leitura encontrou ${items.length}. A compra precisa de reconciliação.`};
+ const badMath=items.findIndex(i=>num(i.quantity)>0&&num(i.unitPrice)>0&&Math.abs(round2(num(i.quantity)*num(i.unitPrice))-num(i.total))>0.05);
+ if(badMath>=0)return {ok:false,message:`O item ${badMath+1} não fecha quantidade × preço unitário = total da linha. Corrija a leitura antes de salvar.`};
+ const diff=Math.abs(lineSum-total);
+ if(diff>0.05)return {ok:false,message:`As linhas somam ${money(lineSum)}, mas o total identificado é ${money(total)}. Diferença de ${money(diff)}. A compra precisa ser conferida.`};
+ return {ok:true,message:`${items.length} itens identificados; soma das linhas = ${money(lineSum)}.`};
+}
+
+async function saveAttachment(purchaseId,file){const id=uid("att");await put("attachments",{id,purchaseId,name:file.name,type:file.type,size:file.size,blob:file,createdAt:todayISO()});return id}
+async function openAttachment(id,relative){if(relative){window.open(relative,"_blank");return}const a=await getOne("attachments",id);if(!a?.blob)return toast("Comprovante não encontrado no banco local.");const u=URL.createObjectURL(a.blob);window.open(u,"_blank");setTimeout(()=>URL.revokeObjectURL(u),60000)}
+window.openAttachment=openAttachment
+async function readFileBase64(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(",")[1]);fr.onerror=()=>rej(fr.error||new Error("Falha ao ler arquivo"));fr.readAsDataURL(file)})}
+async function fetchWithRetry(url,options={},retries=2,timeoutMs=30000){
+ let last;
+ for(let attempt=0;attempt<=retries;attempt++){
+  const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+   const r=await fetch(url,{...options,signal:controller.signal});
+   clearTimeout(timer);
+   if(r.ok || (r.status>=400 && r.status<500 && r.status!==429)) return r;
+   last=new Error(`HTTP ${r.status}`);
+  }catch(e){clearTimeout(timer);last=e}
+  if(attempt<retries) await new Promise(r=>setTimeout(r,700*Math.pow(2,attempt)));
+ }
+ throw new Error(last?.name==="AbortError"?"Tempo limite excedido ao consultar o Gemini.":last?.message||"Falha de rede ao consultar o Gemini.");
+}
+async function geminiReadReceipt(file){
+ const s=(await data()).settings,b64=await readFileBase64(file),mime=file.type||'application/octet-stream';
+ const prompt='Você é o módulo fiscal do Compras da JuRe. Leia visualmente o comprovante e devolva SOMENTE JSON válido. Identifique data, hora, estabelecimento, CNPJ, endereço/localidade, total, descontos, pagamento e cada linha de item com nome, marca se houver, embalagem/peso/volume, quantidade, unidade, preço unitário, total da linha e desconto. Nunca invente. Se um campo estiver ilegível, use vazio/null e needsReview=true. Preserve exatamente a data do documento. Não use dados de outros comprovantes, histórico ou exemplos. Estrutura: {market:{name,cnpj,address,city,state},date,time,total,discountTotal,paymentMethod,documentNumber,nfceKey,items:[{barcode,name,brand,category,pack,unit,quantity,unitPrice,total,discount,needsReview,confidence}],confidence}.';
+ if(location.protocol!=='file:'&&location.hostname==='localhost'){
+  const r=await fetchWithRetry('/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mimeType:mime,data:b64,prompt,model:s.geminiModel||'gemini-3.7-flash'})},1,60000);
+  if(!r.ok){let e='Proxy visual indisponível';try{const x=await r.json();e=x.error||e}catch{};throw new Error(e)}
+  const j=await r.json();return j.data||j.result||j;
+ }
+ throw new Error('IA visual indisponível neste modo. Inicie o servidor local seguro; a chave nunca é usada no navegador.');
+}
+async function ocrSpaceReadReceipt(file){
+ const b64=await readFileBase64(file),mime=file.type||'image/jpeg';
+ const r=await fetchWithRetry('/api/ocr-space',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mimeType:mime,data:b64})},1,60000);if(!r.ok){let e='OCR secundário indisponível';try{const x=await r.json();e=x.error||e}catch{};throw new Error(e)}const j=await r.json();return {text:j.text||'',source:'ocr-space',confidence:j.confidence||.65};
+}
+function reconcileVisionWithLocal(local,vision){
+ const out={...(local||{}),market:{...((local&&local.market)||{})},items:[]};
+ const li=local?.items||[],vi=vision?.items||[],used=new Set();
+ if(vision?.market)out.market={...out.market,...vision.market};
+ if(vi.length){
+  for(const v of vi){
+   let best=li.reduce((acc,x,idx)=>{if(used.has(idx))return acc;const sim=itemSimilarityLocal(x,v);return (!acc||sim>acc.sim)?{x,sim,idx}:acc},{x:null,sim:0,idx:-1});
+   const x=best?.sim>=.55?best.x:null;if(best?.idx>=0&&x)used.add(best.idx);
+   out.items.push({...((x)||{}),...v,confidence:Math.max(num(v.confidence),num(x?.confidence)||0),needsReview:!!(v.needsReview||x?.needsReview||best.sim<.70)});
+  }
+  li.forEach((x,idx)=>{if(!used.has(idx)&&num(x.total)>0&&x.name){out.items.push({...x,needsReview:true,confidence:Math.min(num(x.confidence)||.6,.78)});}});
+ }else out.items=li;
+ const vTotal=num(vision?.total),lTotal=num(local?.total);out.total=vTotal||lTotal;
+ if(vTotal&&lTotal&&Math.abs(vTotal-lTotal)>.05){out.total=lTotal;out.needsReview=true;out.totalMismatch={local:lTotal,vision:vTotal};}
+ out.date=vision?.date||local?.date;out.time=vision?.time||local?.time;out.discountTotal=num(vision?.discountTotal)||num(local?.discountTotal);out.paymentMethod=vision?.paymentMethod||local?.paymentMethod;out.documentNumber=vision?.documentNumber||local?.documentNumber;out.nfceKey=local?.nfceKey||vision?.nfceKey;out.sefazUrl=local?.sefazUrl||vision?.sefazUrl;out.sourceEngine='ocr+cascade-vision';out.visionConfidence=num(vision?.confidence);out.itemCountDeclared=Number(vision?.itemCountDeclared||local?.itemCountDeclared||0);out.evidenceCoverage=Math.min(1,(out.items||[]).filter(i=>i.name&&num(i.total)>0).length/Math.max(1,out.itemCountDeclared||out.items.length));return out;
+}
+
+function itemSimilarityLocal(a,b){let s=0;const an=normalize(a?.name),bn=normalize(b?.name);if(a?.barcode&&b?.barcode&&String(a.barcode).replace(/\D/g,'')===String(b.barcode).replace(/\D/g,''))s+=.55;if(an&&bn){if(an===bn)s+=.35;else{const aa=new Set(an.split(' ')),bb=new Set(bn.split(' '));s+=.30*([...aa].filter(x=>bb.has(x)).length/Math.max(1,new Set([...aa,...bb]).size));}}if(a?.total&&b?.total&&Math.abs(num(a.total)-num(b.total))<=.05)s+=.25;return Math.min(1,s);}
+
+function renderReceiptEditor(d){
+ const m=d.market||{};
+ $("#receiptEditor").classList.remove("empty");
+ $("#receiptEditor").innerHTML=`<div class="form-grid"><label>Mercado<input id="riMarket" value="${esc(m.name||"")}"></label><label>CNPJ<input id="riCnpj" value="${esc(m.cnpj||"")}"></label><label>Data da compra<input id="riDate" type="date" value="${d.date||""}" disabled><small>Data vem do documento e fica protegida como fato histórico.</small></label><label>Hora<input id="riTime" value="${esc(d.time||"")}"></label><label>Total<input id="riTotal" value="${d.total??""}"></label><label>Desconto<input id="riDiscount" value="${d.discountTotal||0}"></label></div><h4>Itens (${d.items.length})</h4>${d.items.map((it,i)=>`<div class="item-line"><b>${esc(it.name||"Item não identificado")}</b>${it.needsReview?` <span class="badge warn">conferir</span>`:""}${it.confidence!=null?` <span class="badge">${Math.round(clamp(num(it.confidence)||0)*100)}%</span>`:""}<div class="form-grid"><label>Quantidade<input data-ri="${i}" class="ri-qty" value="${it.quantity??1}"></label><label>Unidade<input data-ri="${i}" class="ri-unit" value="${esc(it.unit||"un")}"></label><label>Preço unitário<input data-ri="${i}" class="ri-price" value="${it.unitPrice??0}"></label><label>Total da linha<input data-ri="${i}" class="ri-line" value="${it.total??0}"></label></div></div>`).join("")}`;
+}
+async function computePurchaseFingerprint(p){
+ const key=String(p.nfceKey||'').replace(/\D/g,'');
+ if(key.length===44)return `NFCe:${key}`;
+ const base=[canonicalCnpj(p.cnpj),String(p.documentNumber||'').trim().toUpperCase(),normalizeReceiptDate(p.date),Number(p.total||0).toFixed(2),(p.items||[]).map(i=>`${String(i.barcode||'').replace(/\D/g,'')}|${normalize(i.name)}|${Number(i.quantity||0).toFixed(3)}|${Number(i.total||0).toFixed(2)}`).sort().join('||')].join('##');
+ if(globalThis.crypto?.subtle){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(base));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+ return base;
+}
+$("#saveImportBtn").onclick=async()=>{
+ if(!pendingImport)return;
+ const qs=$$(".ri-qty"),us=$$(".ri-unit"),ps=$$(".ri-price"),ls=$$(".ri-line");
+ const edited={...pendingImport,date:$("#riDate").value,total:num($("#riTotal").value),discountTotal:num($("#riDiscount").value),items:pendingImport.items.map((it,i)=>({...it,quantity:num(qs[i]?.value),unit:us[i]?.value||"un",unitPrice:num(ps[i]?.value),total:num(ls[i]?.value)}))};
+ const check=validateReceiptData(edited);
+ if(!check.ok){setImportStatus("warn","Compra ainda não pode ser gravada",check.message);toast("Corrija a conferência antes de salvar.");return}
+ const d=await data(),date=edited.date;if(!date)return toast("A data do documento é obrigatória.");
+ if(!selectedFile) selectedFile=new File([JSON.stringify({type:'fiscal-document',key:edited.nfceKey||'',createdAt:todayISO()})],`documento-fiscal-${edited.nfceKey||'sem-chave'}.json`,{type:'application/json'});
+ const marketName=$("#riMarket").value.trim()||"Mercado não identificado",cnpj=canonicalCnpj($("#riCnpj").value);
+ const docNo=edited.documentNumber||"";
+ const fingerprint=await computePurchaseFingerprint({...edited,cnpj});
+ const dup=d.purchases.find(x=>x.active!==false&&x.fingerprint&&x.fingerprint===fingerprint) ||
+   d.purchases.find(x=>x.active!==false&&x.date===date&&num(x.total)===num(edited.total)&&((cnpj&&canonicalCnpj(x.cnpj)===cnpj)||(docNo&&x.documentNumber===docNo)));
+ if(dup){
+   if(edited.fiscalAutoLaunch){setImportStatus('warn','Compra já cadastrada',`A mesma chave fiscal já existe no histórico (${fmtDate(dup.date)} · ${dup.marketName}). O JuRe evitou duplicar o lançamento.`);pendingImport=null;selectedFile=null;return;}
+   if(!confirm(`Parece ser o mesmo comprovante já cadastrado em ${fmtDate(dup.date)} no ${dup.marketName}.\n\nDeseja registrar novamente assim mesmo?`))return;
+ }
+ let market=d.markets.find(m=>m.cnpj&&cnpj&&canonicalCnpj(m.cnpj)===cnpj)||d.markets.find(m=>normalize(m.name)===normalize(marketName));
+ if(!market){market={id:uid("market"),name:marketName,legalName:marketName,cnpj,address:"",city:"",state:"",createdAt:todayISO(),active:true};await put("markets",market)}
+ const p={id:uid("purchase"),date,time:$("#riTime").value.trim(),marketId:market.id,marketName,cnpj,total:num(edited.total),itemCount:edited.items.length,discountTotal:num(edited.discountTotal),paymentMethod:edited.paymentMethod||"",documentNumber:edited.documentNumber||"",nfceKey:edited.nfceKey||"",sefazUrl:edited.sefazUrl||"",fingerprint,receiptReference:"",receiptName:selectedFile.name,source:"import",status:"reviewed",createdAt:todayISO(),updatedAt:todayISO(),active:true};
+ await putPurchase(p);const attachmentId=await saveAttachment(p.id,selectedFile);p.receiptReference=`attachment:${attachmentId}`;await putPurchase(p);
+ const items=[];edited.items.forEach(it=>{const match=findExistingProduct(d.products,it);const product=match||{id:uid("prod"),barcode:it.barcode||"",name:cleanProductName(it.name),brand:it.brand||"",category:it.category||"Outros",pack:it.pack||guessPack(it.name),unit:it.unit||"un",health:"Não classificado",active:true,createdAt:todayISO(),updatedAt:todayISO()};items.push({id:uid("item"),purchaseId:p.id,productId:product.id,barcode:it.barcode||"",descriptionRaw:it.name,quantity:num(it.quantity),unit:it.unit||product.unit,pack:it.pack||product.pack,unitPrice:num(it.unitPrice),lineTotal:num(it.total),discount:num(it.discount),totalAfterDiscount:round2(num(it.total)-num(it.discount)),confidence:clamp(num(it.confidence)||.7),needsReview:!!it.needsReview,purchaseDate:date,createdAt:todayISO(),updatedAt:todayISO()});if(!match)d.products.push(product)});
+ await bulkPut("products",d.products.filter(x=>x.id));await bulkPut("purchaseItems",items);await audit(edited.fiscalAutoLaunch?"Compra lançada automaticamente a partir de NFC-e por QR.":"Nova compra importada após revisão.","purchase",p.id,"create");pendingImport=null;selectedFile=null;$("#receiptFile").value="";$("#saveImportRow").classList.add("hidden");$("#receiptEditor").className="editor empty";$("#receiptEditor").textContent="Compra salva. Os itens já podem aparecer nas próximas listas.";setImportStatus("success","Compra gravada","O comprovante original foi associado ao histórico e os dados conferidos foram registrados.");await renderAll();toast("Compra salva e adicionada ao histórico.");go("compras")
+};
+$("#cancelImportBtn").onclick=()=>{$("#saveImportRow").classList.add("hidden");$("#receiptEditor").className="editor empty";$("#receiptEditor").textContent="Os dados identificados aparecerão aqui.";pendingImport=null;selectedFile=null;setImportStatus("idle","Aguardando comprovante","Selecione uma imagem ou PDF para iniciar a leitura.")}
+
+function cleanProductName(s){return String(s||"").replace(/\s+/g," ").trim()}
+function guessPack(s){const m=String(s||"").match(/(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|un)\b/i);return m?m[1].replace(",",".")+" "+m[2].toUpperCase():""}
+function findExistingProduct(products,it){
+ const barcode=String(it.barcode||"").replace(/\D/g,"");if(barcode){const x=products.find(p=>p.barcode&&String(p.barcode).replace(/\D/g,"")===barcode);if(x)return x}
+ const name=normalize(it.name),brand=normalize(it.brand),pack=normalize(it.pack||guessPack(it.name)),unit=it.unit||"un";
+ let best=null,bestScore=0;for(const p of products){let score=0; if(brand&&normalize(p.brand)===brand)score+=.25; if(name&&normalize(p.name)===name)score+=.45; else if(name&&normalize(p.name).includes(name))score+=.25; if(pack&&normalize(p.pack)===pack)score+=.20;if(unit===p.unit)score+=.10;if(score>bestScore){bestScore=score;best=p}}return bestScore>=.78 || (best && name && normalize(best.name)===name && unit===best.unit && !barcode)?best:null}
+
+async function agentContext(){const d=await data();const active=d.purchases.filter(p=>p.active!==false),items=d.purchaseItems.filter(i=>active.some(p=>p.id===i.purchaseId));return {summary:{total:active.reduce((s,p)=>s+num(p.total),0),purchases:active.length,products:d.products.filter(p=>p.active!==false).length,markets:new Set(active.map(p=>p.marketId)).size},purchases:active.map(p=>({id:p.id,date:p.date,market:p.marketName,total:p.total,itemCount:p.itemCount})),products:d.products.filter(p=>p.active!==false).map(p=>({id:p.id,name:p.name,brand:p.brand,category:p.category,pack:p.pack,health:p.health})),recentItems:items.slice(-80).map(i=>{const p=d.products.find(x=>x.id===i.productId);return {date:i.purchaseDate||active.find(x=>x.id===i.purchaseId)?.date,product:p?.name,qty:i.quantity,unitPrice:i.unitPrice,total:i.totalAfterDiscount||i.lineTotal,market:active.find(x=>x.id===i.purchaseId)?.marketName}})}}
+function localAgent(q){
+ const d=CURRENT_DATA;const nq=normalize(q);const active=d.purchases.filter(p=>p.active!==false),items=d.purchaseItems.filter(i=>active.some(p=>p.id===i.purchaseId));
+ if(/ultima compra|última compra|ultima ida/.test(nq)){const p=active.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];return p?`Sua compra mais recente foi em ${fmtDate(p.date)}, no ${p.marketName}, no valor de ${money(p.total)}.`:"Ainda não há compras."}
+ if(/maior gasto|categoria/.test(nq)){const map={};for(const i of items){const p=d.products.find(x=>x.id===i.productId);map[p?.category||"Outros"]=(map[p?.category||"Outros"]||0)+num(i.totalAfterDiscount??i.lineTotal)}const x=Object.entries(map).sort((a,b)=>b[1]-a[1])[0];return x?`A categoria que mais concentra gasto no histórico é ${x[0]}, com ${money(x[1])}.`:"Ainda não há dados."}
+ if(/mais de uma vez|recorrentes|repetid/.test(nq)){const counts={};for(const i of items)counts[i.productId]=(counts[i.productId]||0)+1;const xs=Object.entries(counts).filter(x=>x[1]>1).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,n])=>`${d.products.find(p=>p.id===id)?.name||"produto"} (${n} ocorrências)`);return xs.length?`Alguns itens que já aparecem repetidamente são: ${xs.join(", ")}.`:"Ainda não há itens recorrentes."}
+ if(/como funciona a edição|editar compra|corrigir/.test(nq))return"Entre em Compras, abra a compra e use “Ver / editar”. A data da compra fica protegida; você corrige os demais campos e salva. A correção é registrada em auditoria."
+ if(/melhor preço|onde .*preço|mercado/.test(nq))return"Com apenas uma compra ainda não dá para afirmar qual mercado é melhor. Assim que o mesmo produto aparecer em mais de um mercado, o histórico permitirá comparar preço médio, menor preço e variação."
+ return"Consigo responder perguntas sobre suas compras, produtos, listas, consumo e o manual. Tente perguntar, por exemplo: “quanto gastei no Alvorada?” ou “como funciona a lista de compras?”.";
+}
+async function askAgent(q){
+ CURRENT_DATA=await data();const s=CURRENT_DATA.settings,context=await agentContext();const system=`Você é o Agente JuRe. Fale em português cotidiano, claro e objetivo. Nunca invente dados. Não trate uma compra como consumo físico certo; trate como ritmo de aquisição. Não chame de perda aquilo que é apenas oportunidade. A data de uma compra é um fato histórico e não deve ser alterada por correção. Use apenas o contexto fornecido. Contexto JSON: ${JSON.stringify(context)}. Manual resumido: o app separa produto, ocorrência de compra e lista; produtos repetidos não são duplicados; correções não mudam a data; exclusões são arquivamentos.`;
+ if(location.protocol!=='file:'&&location.hostname==='localhost'){
+  const r=await fetchWithRetry('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,system,model:s.geminiModel||'gemini-3.7-flash'})},1,60000);if(!r.ok)throw new Error(`Proxy HTTP ${r.status}`);const j=await r.json();return j.text||'Não recebi uma resposta útil.';
+ }
+ return localAgent(q);
+}
+async function sendAgent(q){if(!q.trim())return;const box=$("#chatMessages");box.insertAdjacentHTML("beforeend",`<div class="msg user">${q.replace(/[<>&]/g,m=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[m]))}</div>`);$("#agentInput").value="";box.insertAdjacentHTML("beforeend",`<div class="msg bot" id="typing">Analisando…</div>`);box.scrollTop=box.scrollHeight;try{const a=await askAgent(q);$("#typing").remove();box.insertAdjacentHTML("beforeend",`<div class="msg bot">${a.replace(/\n/g,"<br>")}</div>`)}catch(e){$("#typing").textContent="Não consegui consultar o Gemini agora. A chave ou conexão pode estar indisponível.";}}
+$("#agentSend").onclick=()=>sendAgent($("#agentInput").value);$("#agentInput").onkeydown=e=>{if(e.key==="Enter")sendAgent($("#agentInput").value)};$$(".quick button").forEach(b=>b.onclick=()=>sendAgent(b.dataset.q));
+
+setupImport();
+if(RUNNING_FROM_FILE){

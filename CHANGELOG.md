@@ -1,3 +1,14 @@
+## v2.6.5 — auditoria contextual e reconciliação
+
+- Novo `modules/receipt-auditor.js` para associação contextual de produtos e auditoria financeira antes da publicação.
+- Reconhecimento de abreviações e variações como `Refr`, `Cerv`, `p/`, `c/12` e correções leves de grafia sem alterar a evidência original.
+- Cruzamento de produto por código/EAN e, na ausência dele, nome, tokens, marca, embalagem, unidade e categoria.
+- Auditoria de quantidade × preço unitário × total da linha, soma das linhas × total da compra, descontos e quantidade declarada.
+- Rastreamento de duplicidade por chave fiscal e, na ausência dela, por estabelecimento/CNPJ + data + hora + total/documento + composição das linhas.
+- Bloqueio do lançamento automático quando houver divergência matemática ou associação ambígua.
+- Fingerprint de comprovante fortalecido com hora e composição das linhas.
+- Teste direto com imagem de comprovante em formato de lista do próprio JuRe: 5 itens, quantidades 1/2/1/3/1 e total R$ 95,51.
+
 ## 2.6.2 — integração fiscal robusta
 
 - Corrigido `CONSULTADANFE_REQUEST_FIELD` para `chave`.

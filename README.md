@@ -1,4 +1,4 @@
-# Compras da JuRe — v2.6.4
+# Compras da JuRe — v2.6.5
 
 Aplicação local-first para histórico de compras domésticas, com importação de comprovantes em operação anti-falhas.
 
@@ -67,3 +67,12 @@ CONSULTADANFE_AUTH_PREFIX=
 Há dois caminhos no aplicativo. `Consultar por chave` usa `/api/v1/consulta` para NF-e modelo 55 dentro da janela de datas do serviço. `Enviar XML e gerar DANFE` usa `/api/v1/danfe`, não depende dessa janela e aceita XML de NF-e/NFC-e conforme o contrato do serviço. Em ambos os casos o JuRe preserva o JSON bruto e permite baixar JSON, PDF e XML. Quando o XML está disponível, o servidor extrai emitente, data, total e itens diretamente do XML; o OCR deixa de ser a fonte principal desses dados.
 
 A chave fiscal é localizada pelo QR/OCR, validada pelo dígito verificador e enviada somente pelo servidor local.
+
+
+## Auditoria contextual v2.6.5
+
+Antes de publicar uma compra, o JuRe executa uma auditoria determinística em duas frentes. No produto, usa primeiro código/EAN e depois cruza nome normalizado, abreviações, marca, embalagem, unidade e categoria com o catálogo existente. Associações ambíguas não são publicadas automaticamente.
+
+No comprovante, o sistema rastreia CNPJ, estabelecimento, data, hora, total, número fiscal quando existente e composição das linhas. A auditoria verifica quantidade × preço unitário = total da linha, soma das linhas × total da compra, descontos, quantidade declarada de itens e duplicidades. Uma divergência crítica bloqueia o lançamento.
+
+O fingerprint sem chave fiscal inclui estabelecimento, CNPJ, data, hora, documento, total e assinatura das linhas. Quando existe chave fiscal de 44 dígitos, ela passa a ser o identificador primário da compra para impedir duplicações.

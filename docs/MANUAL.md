@@ -117,3 +117,8 @@ O Compras da JuRe deve ser conservador quando estiver inseguro.
 
 do que registrar um produto ou preço errado.
 
+
+
+## Auditoria antes do lançamento
+
+Toda importação passa por uma etapa de auditoria antes de ser gravada. O JuRe verifica a identidade do comprovante, associa produtos ao catálogo usando código e contexto histórico, valida quantidade × preço unitário × total da linha e reconcilia a soma das linhas com o total da compra. Duplicidade fiscal exata é bloqueada. Associação ambígua ou divergência matemática impede o lançamento automático.
