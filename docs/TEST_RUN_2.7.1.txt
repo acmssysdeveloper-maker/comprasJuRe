@@ -1,0 +1,120 @@
+
+>>> tests/validate.mjs
+Compras da JuRe v2.7.1 static/security checks: PASS
+
+>>> tests/evidence-field-audit-test.mjs
+{
+  "pass": true,
+  "checks": 12,
+  "status": "PASS",
+  "receiptEvidenceFields": [
+    "marketName",
+    "cnpj",
+    "date",
+    "time",
+    "documentNumber",
+    "fiscalKey",
+    "total",
+    "discountTotal",
+    "paymentMethod",
+    "paymentAmount",
+    "declaredItemCount",
+    "auditMath"
+  ],
+  "itemEvidenceFields": [
+    "name",
+    "barcode",
+    "brand",
+    "pack",
+    "category",
+    "quantity",
+    "unit",
+    "unitPrice",
+    "total",
+    "discount",
+    "productIdentity"
+  ]
+}
+
+>>> tests/anti-fail-audit.mjs
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Anti-fail OCR regression: PASS — OCR remains evidence only; incomplete readings must escalate/block.
+
+>>> tests/reader-engine-test.mjs
+ReceiptEngine fiscal-key tests: PASS
+
+>>> tests/ocr-hardening-test.mjs
+Estimating resolution as 368
+Detected 382 diacritics
+PSM 3: 3 item candidates; total=29.98; cnpj=-
+Estimating resolution as 368
+Detected 470 diacritics
+PSM 4: 5 item candidates; total=25.96; cnpj=-
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+PSM 6: 8 item candidates; total=39.3; cnpj=-
+Estimating resolution as 368
+Detected 470 diacritics
+PSM 11: 5 item candidates; total=39.98; cnpj=-
+Estimating resolution as 368
+OSD: Weak margin (4.21) for 205 blob text block, but using orientation anyway: 0
+Detected 382 diacritics
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+PSM 12: 3 item candidates; total=5.98; cnpj=-
+OCR hardening assertions: PASS
+
+>>> tests/nfce-camera-test.mjs
+NFC-e camera parser test: PASS
+
+>>> tests/nfce-server-contract-test.mjs
+NFC-e server contract test: PASS
+
+>>> tests/receipt-parser-test.mjs
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Receipt parser regression: PASS (synthetic=2, OCR-real candidates=8)
+
+>>> tests/receipt-fixture-test.mjs
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Image too small to scale!! (2x36 vs min width of 3)
+Line cannot be recognized!!
+Receipt fixture integration test: PASS (OCR real executado; leitura parcial é bloqueada até conferência)
+
+>>> tests/server-security-test.mjs
+Local proxy security checks: PASS
+
+>>> tests/fiscal-api-test.mjs
+Fiscal API integration: PASS (consulta por chave + /danfe por XML + validações)
+
+ALL TESTS: PASS

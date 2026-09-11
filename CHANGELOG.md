@@ -148,3 +148,41 @@
 - Quando a consulta pública fornece estrutura suficiente, o JuRe prepara e pode lançar a compra automaticamente.
 - Quando não há dados estruturados confiáveis, o JuRe abre a consulta oficial e não inventa itens.
 - Adicionado fallback de captura de foto do QR pelo navegador móvel.
+
+## 2.6.6 — Motor de auditoria matemática por linha
+
+### Núcleo reforçado
+- Cada linha de item recebe `lineId` e é auditada isoladamente antes da publicação.
+- Campos obrigatórios: nome, quantidade, unidade, preço unitário e total da linha.
+- Revalidação matemática individual: quantidade × preço unitário = total da linha, com tolerância monetária de R$ 0,03 para arredondamentos.
+- Produtos pesados usam a mesma regra sobre peso × preço por unidade de massa.
+- Descontos de item e descontos globais são separados e reconciliados.
+- O motor classifica divergências em `BALANCED`, `POSSIBLE_DISCOUNT_OR_UNRECONCILED` e `POSSIBLE_OVERCHARGE_OR_SURCHARGE`.
+- Desconto maior que a soma bruta das linhas bloqueia a publicação.
+- A soma das linhas + descontos/acréscimos deve fechar com o total do documento antes do lançamento.
+- Valor pago é auditado contra o total; pagamentos em dinheiro podem considerar troco.
+
+### Identidade e recorrência
+- Correspondência por EAN/código exato tem prioridade.
+- Associação contextual usa nome normalizado, aliases, marca, embalagem, unidade e categoria.
+- Correspondências não exatas recebem estado de revisão e não são fundidas silenciosamente.
+- Duplicidade fiscal prioriza a chave de 44 dígitos; sem chave, cruza CNPJ + data + hora + total e assinatura dos itens.
+
+### Regra de publicação
+- Falta de qualquer campo obrigatório, divergência aritmética ou reconciliação documental incompleta bloqueia o lançamento.
+- O OCR continua sendo evidência de entrada; a auditoria é a barreira antes da persistência.
+
+## 2.7.1 — Evidência formal por campo
+- Objeto de evidência individual por campo de documento e item.
+- Rastreabilidade de origem, método, confiança, corroboração, conflitos e motivo da aceitação.
+- Barreira de publicação: somente `PASS` pode ser gravado automaticamente.
+- `auditEvidence` e `auditTrace` persistidos na compra; `fieldEvidence` persistido por item.
+- Produto `NEW` não é confundido com erro; associações `AMBIGUOUS/REVIEW/WEAK` exigem revisão.
+- Reconciliação monetária passa a usar valor bruto calculado por quantidade × preço e desconta descontos exatamente uma vez.
+
+## v2.7.1 — correção cirúrgica de associação de catálogo
+- EAN/código incompatível agora é contradição bloqueadora para associação automática.
+- `NEW`, `WEAK` e `REVIEW` nunca preenchem `matchedProduct` automaticamente.
+- Mesmo EAN com variante semântica divergente (ex.: ZERO vs comum) exige revisão.
+- UI deixa de exibir candidatos fracos como se fossem produtos associados.
+- Adicionado teste de regressão com o cenário real de 5 itens que havia produzido associações cruzadas.

@@ -1,4 +1,4 @@
-# Compras da JuRe — v2.6.5
+# Compras da JuRe — v2.7.1
 
 Aplicação local-first para histórico de compras domésticas, com importação de comprovantes em operação anti-falhas.
 
@@ -69,10 +69,13 @@ Há dois caminhos no aplicativo. `Consultar por chave` usa `/api/v1/consulta` pa
 A chave fiscal é localizada pelo QR/OCR, validada pelo dígito verificador e enviada somente pelo servidor local.
 
 
-## Auditoria contextual v2.6.5
+## Auditoria contextual v2.7.1
 
 Antes de publicar uma compra, o JuRe executa uma auditoria determinística em duas frentes. No produto, usa primeiro código/EAN e depois cruza nome normalizado, abreviações, marca, embalagem, unidade e categoria com o catálogo existente. Associações ambíguas não são publicadas automaticamente.
 
 No comprovante, o sistema rastreia CNPJ, estabelecimento, data, hora, total, número fiscal quando existente e composição das linhas. A auditoria verifica quantidade × preço unitário = total da linha, soma das linhas × total da compra, descontos, quantidade declarada de itens e duplicidades. Uma divergência crítica bloqueia o lançamento.
 
 O fingerprint sem chave fiscal inclui estabelecimento, CNPJ, data, hora, documento, total e assinatura das linhas. Quando existe chave fiscal de 44 dígitos, ela passa a ser o identificador primário da compra para impedir duplicações.
+
+### v2.7.1 — Auditoria antes do lançamento
+O motor `modules/receipt-auditor.js` passou a auditar cada linha individualmente e o documento como um todo. O lançamento só pode avançar quando os campos obrigatórios estão presentes e a matemática fecha; dúvidas de identidade ficam em revisão e divergências financeiras bloqueiam a publicação. A especificação detalhada está em `docs/AUDITORIA_ALGORITMOS_2.0.md`.

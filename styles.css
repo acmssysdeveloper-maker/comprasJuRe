@@ -29,3 +29,6 @@
 @media (max-width:700px){.modal-card{padding:12px}.qr-video-wrap{aspect-ratio:3/4}.qr-frame{inset:20% 8%}}
 .audit-block{margin:12px 0;padding:12px;border-radius:10px;border:1px solid #dfe3ea;background:#f7f8fb;font-size:12px;line-height:1.5}.audit-block.good{border-color:#cfe8da;background:#f5fbf7}.audit-block.warn{border-color:#efd8a4;background:#fffaf0}.audit-block.danger{border-color:#efc7c4;background:#fff6f5}.audit-block b{display:block;margin-bottom:5px}.audit-block small{display:block;margin-top:6px;color:#6b6b76}.item-line>small{display:block;margin:4px 0;color:#7a7a86}
 button:disabled{opacity:.5;cursor:not-allowed}
+
+/* v2.7.1 — field-level evidence trace */
+.evidence-details{margin-top:10px;border-top:1px dashed var(--line,#ddd);padding-top:8px}.evidence-details summary{cursor:pointer;font-weight:700}.evidence-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:8px}.evidence-field{display:flex;flex-direction:column;gap:3px;padding:8px;border:1px solid var(--line,#ddd);border-radius:8px;background:rgba(255,255,255,.55)}.evidence-field small{color:#666}.danger-text{color:#b42318}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
