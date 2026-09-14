@@ -8,16 +8,18 @@
 <meta name="theme-color" content="#085ED7">
 <meta property="og:title" content="Compras da JuRe">
 <meta property="og:image" content="assets/jure-logo.svg">
-<link rel="stylesheet" href="styles.css?v=2.8.6">
+<link rel="stylesheet" href="styles.css?v=2.8.7">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<title>Compras da JuRe v2.8.6</title>
-<script defer src="modules/receipt-engine.js?v=2.8.6"></script>
-<script defer src="modules/receipt-auditor.js?v=2.8.6"></script>
+<title>Compras da JuRe v2.8.7</title>
+<script defer src="modules/receipt-engine.js?v=2.8.7"></script>
+<script defer src="modules/receipt-auditor.js?v=2.8.7"></script>
 </head>
 <body>
 <div class="shell">
-<aside class="sidebar">
+<button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button>
+<div class="nav-scrim" id="navScrim" aria-hidden="true"></div>
+<aside class="sidebar" id="sidebar">
   <div class="brand"><img class="brand-logo" src="assets/jure-icon.svg" alt="" aria-hidden="true"><div><b>Compras da JuRe</b><span>Seus cupons em boas mãos</span></div></div>
   <nav id="nav">
     <button data-page="dashboard" class="active">⌂ <span>Visão geral</span></button>
@@ -34,7 +36,7 @@
     <button data-page="config">⚙ <span>Configurações</span></button>
     <button data-page="updates">↻ <span>Atualizações</span></button>
   </nav>
-  <div class="side-foot">v2.8.6 · listas + compras offline</div>
+  <div class="side-foot">v2.8.7 · listas + compras offline</div>
 </aside>
 
 <main>
@@ -147,7 +149,7 @@
 
 <section id="updates" class="page">
   <div class="section-head"><div><div class="eyebrow">MANUTENÇÃO</div><h2>Atualizações</h2><p>O app usa versionamento e migrações para preservar o histórico.</p></div><button class="ghost" id="checkUpdate">Verificar</button></div>
-  <div class="panel"><div class="version-box"><span>Versão instalada</span><strong id="currentVersion">2.8.6</strong></div><div id="updateStatus" class="helper">Nenhuma verificação realizada.</div><div class="method-grid"><div><b>Atualização estática</b><p>Substitua os arquivos publicados por um novo pacote versionado.</p></div><div><b>Banco protegido</b><p>As migrações são executadas antes do carregamento e não apagam dados históricos.</p></div><div><b>Backup antes do update</b><p>Exporte um JSON antes de trocar a versão.</p></div><div><b>Sem “autoapagar”</b><p>Exclusão é lógica/arquivamento; registros históricos continuam recuperáveis.</p></div></div></div>
+  <div class="panel"><div class="version-box"><span>Versão instalada</span><strong id="currentVersion">2.8.7</strong></div><div id="updateStatus" class="helper">Nenhuma verificação realizada.</div><div class="method-grid"><div><b>Atualização estática</b><p>Substitua os arquivos publicados por um novo pacote versionado.</p></div><div><b>Banco protegido</b><p>As migrações são executadas antes do carregamento e não apagam dados históricos.</p></div><div><b>Backup antes do update</b><p>Exporte um JSON antes de trocar a versão.</p></div><div><b>Sem “autoapagar”</b><p>Exclusão é lógica/arquivamento; registros históricos continuam recuperáveis.</p></div></div></div>
 </section>
 
 
@@ -170,6 +172,6 @@
 <div id="toast" class="toast"></div>
 
 
-<script src="app.js?v=2.8.6"></script>
+<script src="app.js?v=2.8.7"></script>
 </body>
 </html>

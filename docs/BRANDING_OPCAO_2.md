@@ -1,6 +1,6 @@
 # Compras da JuRe — Identidade visual Opção 2
 
-Aplicada à versão 2.8.6 do aplicativo.
+Aplicada à versão 2.8.7 do aplicativo.
 
 ## Direção
 - Azul tecnológico como cor principal.

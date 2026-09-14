@@ -8,7 +8,7 @@ assert.ok(m,'EMBEDDED_SEED não encontrado');
 const seed=JSON.parse(m[1]);
 const purchase=seed.purchases[0], items=seed.purchaseItems;
 assert.equal(seed.schemaVersion,4);
-assert.equal(seed.appVersion,'2.8.6');
+assert.equal(seed.appVersion,'2.8.7');
 assert.equal(purchase.date,'2026-09-10');
 assert.equal(purchase.marketName,'Supermercados Alvorada');
 assert.equal(purchase.cnpj,'17.833.301/0022-23');
@@ -53,4 +53,4 @@ const env=fs.readFileSync(new URL('.env.example',root),'utf8');assert.ok(env.inc
 // Browser numeric parser regression: evaluate only its source expression.
 const nm=app.match(/const num=\(v\)=>\{[\s\S]*?\n\};/);assert.ok(nm,'num() não encontrado');const browserNum=eval(`(${nm[0].replace(/^const num=/,'').replace(/;$/,'')})`);
 assert.equal(browserNum('350,01'),350.01);assert.equal(browserNum('350.01'),350.01);assert.equal(browserNum('1.234,56'),1234.56);assert.equal(browserNum('1.234'),1.234);assert.equal(browserNum(350.01),350.01);
-console.log('Compras da JuRe v2.8.6 static/security checks: PASS');
+console.log('Compras da JuRe v2.8.7 static/security checks: PASS');

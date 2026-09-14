@@ -1,0 +1,22 @@
+Compras da JuRe v2.8.7 — registro de validação
+Data: 14/09/2026
+Escopo: UX mobile, navegação e regressão funcional.
+
+PASS — tests/validate.mjs
+PASS — tests/mobile-ux-test.mjs
+PASS — tests/evidence-field-audit-test.mjs
+PASS — tests/anti-fail-audit.mjs
+PASS — tests/reader-engine-test.mjs
+PASS — tests/nfce-camera-test.mjs
+PASS — tests/nfce-server-contract-test.mjs
+PASS — tests/fiscal-api-test.mjs
+PASS — tests/server-security-test.mjs
+PASS — tests/receipt-parser-test.mjs
+PASS — tests/receipt-audit-test.mjs
+PASS — tests/receipt-fixture-test.mjs
+PASS — tests/image-receipt-parser-test.mjs
+PASS — tests/catalog-association-regression.mjs
+PASS — tests/xlsx-list-test.mjs
+PASS — tests/smoke-test.js
+
+Observação: a execução integral de `tests/run-all.mjs` ultrapassou o limite de execução durante a repetição do teste OCR; os testes individuais relevantes foram executados e passaram. Isso não é tratado como PASS do runner integral.

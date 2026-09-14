@@ -1,3 +1,11 @@
+## 2.8.7 — 14/09/2026 — UX mobile e navegação
+
+- Navegação mobile refeita como sidebar lateral (drawer) com overlay e fechamento por toque/Esc.
+- Menu completo disponível no smartphone, sem esconder opções em uma barra inferior truncada.
+- Cabeçalho mobile recebeu botão de menu, título compacto e ação principal de importação.
+- Áreas de formulário, tabelas, cards e ações receberam ajustes de toque, largura e rolagem para telas pequenas.
+- Mantida a identidade visual da Opção 2 e a lógica funcional da 2.8.6.
+
 ## 2.8.6 — 14/09/2026 — Exclusão de itens de costume
 - Adiciona ação **Excluir** na lista de produtos.
 - A exclusão é segura: o item sai do catálogo ativo sem apagar referências históricas de compras ou listas.

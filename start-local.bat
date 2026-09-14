@@ -18,7 +18,7 @@ for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":%PORT% .*LISTENING"')
 
 start "JuRe Server" cmd /c "cd /d "%~dp0" && node server.mjs"
 timeout /t 2 >nul
-start "" http://localhost:%PORT%/?jure=2.8.6&cacheBust=%RANDOM%%RANDOM%
+start "" http://localhost:%PORT%/?jure=2.8.7&cacheBust=%RANDOM%%RANDOM%
 exit /b
 :no_node
 echo Node.js 18+ e necessario para o servidor local seguro.

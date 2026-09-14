@@ -1,4 +1,4 @@
-# Compras da JuRe — v2.8.6
+# Compras da JuRe — v2.8.7
 
 Aplicação local-first para rotina doméstica de listas de compras, catálogo de itens de costume, registro offline do total por mercado e importação de comprovantes como recurso complementar.
 
@@ -69,7 +69,7 @@ Há dois caminhos no aplicativo. `Consultar por chave` usa `/api/v1/consulta` pa
 A chave fiscal é localizada pelo QR/OCR, validada pelo dígito verificador e enviada somente pelo servidor local.
 
 
-## Auditoria contextual v2.8.6
+## Auditoria contextual v2.8.7
 
 Antes de publicar uma compra, o JuRe executa uma auditoria determinística em duas frentes. No produto, usa primeiro código/EAN e depois cruza nome normalizado, abreviações, marca, embalagem, unidade e categoria com o catálogo existente. Associações ambíguas não são publicadas automaticamente.
 
@@ -77,10 +77,10 @@ No comprovante, o sistema rastreia CNPJ, estabelecimento, data, hora, total, nú
 
 O fingerprint sem chave fiscal inclui estabelecimento, CNPJ, data, hora, documento, total e assinatura das linhas. Quando existe chave fiscal de 44 dígitos, ela passa a ser o identificador primário da compra para impedir duplicações.
 
-### v2.8.6 — Auditoria antes do lançamento
+### v2.8.7 — Auditoria antes do lançamento
 O motor `modules/receipt-auditor.js` passou a auditar cada linha individualmente e o documento como um todo. O lançamento só pode avançar quando os campos obrigatórios estão presentes e a matemática fecha; dúvidas de identidade ficam em revisão e divergências financeiras bloqueiam a publicação. A especificação detalhada está em `docs/AUDITORIA_ALGORITMOS_2.0.md`.
 
-## Fluxo principal v2.8.6 — listas primeiro
+## Fluxo principal v2.8.7 — listas primeiro
 O fluxo recomendado da aplicação passou a ser offline-first para a rotina doméstica:
 
 1. **Itens de costume:** cadastre os itens uma vez no catálogo.
