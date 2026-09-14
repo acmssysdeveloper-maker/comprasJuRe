@@ -1,4 +1,4 @@
-# JuRe v2.7.1 — Fluxo câmera → NFC-e
+# JuRe v2.8.6 — Fluxo câmera → NFC-e
 
 ## Objetivo
 

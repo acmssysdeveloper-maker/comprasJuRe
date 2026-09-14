@@ -262,7 +262,7 @@ function safePath(urlPath){const rel=decodeURIComponent(urlPath||'').replace(/^\
 const server=http.createServer(async(req,res)=>{
  try{
   const u=new URL(req.url,`http://${req.headers.host}`);
-  if(req.method==='GET'&&u.pathname==='/api/status')return send(res,200,{ok:true,version:'2.8.0',gemini:!!KEY,ocrSpace:!!OCR_KEY,consultadanfe:!!DANFE_URL,model:MODEL});
+  if(req.method==='GET'&&u.pathname==='/api/status')return send(res,200,{ok:true,version:'2.8.6',gemini:!!KEY,ocrSpace:!!OCR_KEY,consultadanfe:!!DANFE_URL,model:MODEL});
   if(req.method==='POST'&&u.pathname==='/api/fiscal/consult')return proxyDanfeConsult(req,res);
   if(req.method==='POST'&&u.pathname==='/api/fiscal/danfe')return proxyDanfeXml(req,res);
   if(req.method==='POST'&&u.pathname==='/api/fiscal/nfce-qr')return proxyNfceQr(req,res);
@@ -274,4 +274,4 @@ const server=http.createServer(async(req,res)=>{
   let target=full;try{if(fs.statSync(target).isDirectory())target=path.join(target,'index.html');const data=fs.readFileSync(target);res.writeHead(200,headers(MIME[path.extname(target).toLowerCase()]||'application/octet-stream'));res.end(data)}catch{send(res,404,{error:'Não encontrado'})}
  }catch(e){send(res,500,{error:'Erro interno do servidor local'})}
 });
-server.listen(PORT,'127.0.0.1',()=>console.log(`Compras da JuRe 2.8.0 — http://localhost:${PORT} — Gemini ${KEY?'ATIVO':'sem chave'} — OCR.space ${OCR_KEY?'ATIVO':'sem chave'} — Consulta DANFE ${DANFE_URL?'ATIVA':'sem URL'}`));
+server.listen(PORT,'127.0.0.1',()=>console.log(`Compras da JuRe 2.8.6 — http://localhost:${PORT} — Gemini ${KEY?'ATIVO':'sem chave'} — OCR.space ${OCR_KEY?'ATIVO':'sem chave'} — Consulta DANFE ${DANFE_URL?'ATIVA':'sem URL'}`));

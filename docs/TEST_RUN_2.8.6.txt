@@ -1,0 +1,15 @@
+Compras da JuRe v2.8.6 — registro de validação
+Data: 2026-09-14
+
+Suíte executada: node tests/run-all.mjs
+Resultado esperado: ALL TESTS: PASS
+
+Contrato validado:
+- APP_VERSION=2.8.6
+- DB_VERSION=6
+- schemaVersion=4
+- manifests=2.8.6
+- API status=2.8.6
+- seed único e sem data/seed.json
+- service worker desativado para evitar cache obsoleto
+- branding Opção 2 presente

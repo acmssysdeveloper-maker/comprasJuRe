@@ -1,4 +1,4 @@
-## 2.8.6 — Exclusão de itens de costume
+## 2.8.6 — 14/09/2026 — Exclusão de itens de costume
 - Adiciona ação **Excluir** na lista de produtos.
 - A exclusão é segura: o item sai do catálogo ativo sem apagar referências históricas de compras ou listas.
 - Exibe confirmação diferente quando existem referências.

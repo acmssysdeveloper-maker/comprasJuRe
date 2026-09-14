@@ -1,4 +1,4 @@
-# Compras da JuRe v2.8.1 — Lista-first / Offline
+# Compras da JuRe v2.8.6 — Lista-first / Offline
 
 ## Objetivo da release
 O fluxo principal passa a ser a organização da compra doméstica, não a leitura automática do comprovante.

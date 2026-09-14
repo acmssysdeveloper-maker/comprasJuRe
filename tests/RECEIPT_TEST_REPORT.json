@@ -1,5 +1,6 @@
 {
   "appVersion": "2.6.0",
+  "status": "HISTORICAL_REGRESSION_REPORT",
   "testedReceipt": "test-fixtures/comprovante-alvorada-2026-09-10.jpg",
   "receiptDate": "2026-09-10",
   "market": "Supermercados Alvorada",

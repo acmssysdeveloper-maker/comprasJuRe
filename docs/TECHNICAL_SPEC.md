@@ -1,6 +1,6 @@
 # Compras da JuRe — Documentação Técnica e Especificação do Sistema
 
-**Versão:** 2.6.0  
+**Versão:** 2.8.6  
 **Data da especificação:** 10/09/2026  
 **Modelo:** aplicação web/PWA estática, local-first, sem backend obrigatório.  
 **Banco:** IndexedDB no dispositivo.  
@@ -1009,7 +1009,7 @@ Se algum núcleo estiver instável, novas funcionalidades devem esperar.
 
 ---
 
-## 34. Limites conhecidos do v2.6.0
+## 34. Limites conhecidos do v2.8.6
 
 ### 34.1 Política de leitura segura
 
@@ -1017,7 +1017,7 @@ O Tesseract local não é considerado fonte fiscal definitiva em fotografias de 
 
 O QR code, quando decodificado e validado pelo dígito verificador da chave de 44 posições, é tratado como evidência forte de identidade da NFC-e. Ele não substitui os itens, preços ou quantidades do corpo do documento.
 
-A chave Gemini não é armazenada no navegador. O único caminho aceito pela 2.6.0 é o `server.mjs`, com `GEMINI_API_KEY` no ambiente local.
+A chave Gemini não é armazenada no navegador. O único caminho aceito pela 2.8.6 é o `server.mjs`, com `GEMINI_API_KEY` no ambiente local.
 
 
 
@@ -1025,4 +1025,4 @@ A chave Gemini não é armazenada no navegador. O único caminho aceito pela 2.6
 2. Leitura multimodal de PDF está disponível quando Gemini estiver configurado.
 3. O comparativo de preços melhora progressivamente com histórico; não existe inferência confiável de mercado com uma única ocorrência.
 4. Perfil alimentar é um rótulo de organização pessoal, não diagnóstico ou aconselhamento nutricional.
-5. Chave Gemini direta no navegador não é suportada pela 2.6.0; o acesso é exclusivamente pelo proxy local.
+5. Chave Gemini direta no navegador não é suportada pela 2.8.6; o acesso é exclusivamente pelo proxy local.
