@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 430">
+ <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0B63E5"/><stop offset="1" stop-color="#063B9E"/></linearGradient></defs>
+ <g transform="translate(30 25) scale(.36)"><rect x="40" y="40" width="944" height="944" rx="210" fill="url(#b)"/><path d="M245 300h70l38 294c5 38 37 66 75 66h315c34 0 63-22 73-54l49-159H367" fill="none" stroke="white" stroke-width="55" stroke-linecap="round" stroke-linejoin="round"/><circle cx="435" cy="770" r="42" fill="#5CC9FF" stroke="white" stroke-width="12"/><circle cx="746" cy="770" r="42" fill="#5CC9FF" stroke="white" stroke-width="12"/><path d="M425 280c0-24 19-43 43-43h238c24 0 43 19 43 43v218c0 24-19 43-43 43H468c-24 0-43-19-43-43z" fill="white"/><path d="M468 237h238l43 55H425z" fill="#E9F2FF"/><path d="M492 330h174M492 388h142" stroke="#0B4AA5" stroke-width="27" stroke-linecap="round"/><circle cx="756" cy="294" r="103" fill="#F59E0B" stroke="white" stroke-width="12"/><path d="M711 295l30 31 63-72" fill="none" stroke="white" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/></g>
+ <text x="420" y="165" font-family="Inter,Arial,sans-serif" font-size="116" font-weight="800" fill="#172554">Compras</text>
+ <text x="424" y="285" font-family="Inter,Arial,sans-serif" font-size="82" font-weight="750" fill="#172554">da</text>
+ <text x="590" y="300" font-family="Inter,Arial,sans-serif" font-size="150" font-weight="850" fill="#F59E0B">JuRe</text>
+ <path d="M590 326h470" stroke="#F59E0B" stroke-width="12" stroke-linecap="round"/>
+ <text x="430" y="380" font-family="Inter,Arial,sans-serif" font-size="30" letter-spacing="7" fill="#475569">SEUS CUPONS EM BOAS MÃOS</text>
+</svg>

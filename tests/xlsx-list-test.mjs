@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=new URL('../',import.meta.url);
+const app=fs.readFileSync(new URL('app.js',root),'utf8');
+const extract=(name)=>{const re=new RegExp(`(?:function|async function)\\s+${name}\\b[\\s\\S]*?(?=\\n(?:function|async function)\\s+|\\nwindow\\.|\\n// XLSX|$)`);const m=app.match(re);assert.ok(m,`função ${name} não encontrada`);return m[0]};
+const normalize=(s)=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+const xmlText=(s)=>String(s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+const readZipEntries=eval(`(${extract('readZipEntries').replace(/^async function readZipEntries/,'async function').trim()})`);
+const parseXlsxList=eval(`(${extract('parseXlsxList').replace(/^async function parseXlsxList/,'async function').trim()})`);
+const fixturePath=new URL('../test-fixtures/modelo-lista-compras.xlsx',import.meta.url);
+const f=new File([fs.readFileSync(fixturePath)],'modelo-lista-compras.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+const matrix=await parseXlsxList(f);
+assert.equal(matrix[0][0],'Nome do item');
+assert.equal(matrix[3][0],'Papel higiênico c/12');
+assert.equal(matrix[3][2],'Higiene');
+assert.equal(String(matrix[4][7]),'2707');
+assert.equal(matrix.length,5);
+console.log('XLSX list import regression: PASS');

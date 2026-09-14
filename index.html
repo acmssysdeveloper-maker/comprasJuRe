@@ -5,20 +5,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#6b55e8">
 <meta name="description" content="Compras da JuRe — histórico, consumo, preços, listas e economia.">
-<link rel="stylesheet" href="styles.css">
-<title>Compras da JuRe</title>
-<script defer src="modules/receipt-engine.js"></script>
-<script defer src="modules/receipt-auditor.js"></script>
+<meta name="theme-color" content="#085ED7">
+<meta property="og:title" content="Compras da JuRe">
+<meta property="og:image" content="assets/jure-logo.svg">
+<link rel="stylesheet" href="styles.css?v=2.8.6">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<title>Compras da JuRe v2.8.6</title>
+<script defer src="modules/receipt-engine.js?v=2.8.6"></script>
+<script defer src="modules/receipt-auditor.js?v=2.8.6"></script>
 </head>
 <body>
 <div class="shell">
 <aside class="sidebar">
-  <div class="brand"><div class="mark">J</div><div><b>Compras da JuRe</b><span>Inteligência de compras</span></div></div>
+  <div class="brand"><img class="brand-logo" src="assets/jure-icon.svg" alt="" aria-hidden="true"><div><b>Compras da JuRe</b><span>Seus cupons em boas mãos</span></div></div>
   <nav id="nav">
     <button data-page="dashboard" class="active">⌂ <span>Visão geral</span></button>
     <button data-page="compras">▣ <span>Compras</span></button>
     <button data-page="listas">✓ <span>Minhas listas</span></button>
-    <button data-page="importar">↑ <span>Importar comprovante</span></button>
+    <button data-page="importar">↑ <span>Comprovante / IA</span></button>
     <button data-page="produtos">◫ <span>Produtos</span></button>
     <button data-page="mercados">⌂ <span>Mercados</span></button>
     <button data-page="consumo">⌁ <span>Consumo</span></button>
@@ -29,7 +34,7 @@
     <button data-page="config">⚙ <span>Configurações</span></button>
     <button data-page="updates">↻ <span>Atualizações</span></button>
   </nav>
-  <div class="side-foot">v2.7.1 · auditoria contextual robusta</div>
+  <div class="side-foot">v2.8.6 · listas + compras offline</div>
 </aside>
 
 <main>
@@ -57,17 +62,19 @@
 </section>
 
 <section id="compras" class="page">
-  <div class="section-head"><div><div class="eyebrow">HISTÓRICO</div><h2>Compras realizadas</h2><p>Cada ida ao mercado fica registrada com sua data original.</p></div><button class="primary" data-go="importar">Importar compra</button></div>
+  <div class="section-head"><div><div class="eyebrow">HISTÓRICO</div><h2>Compras realizadas</h2><p>Cada ida ao mercado fica registrada com sua data original.</p></div><div class="top-actions"><button class="primary" data-go="listas">Usar uma lista</button><button class="ghost" data-go="importar">Importar comprovante</button></div></div>
   <div id="purchaseCards"></div>
 </section>
 
 <section id="listas" class="page">
-  <div class="section-head"><div><div class="eyebrow">PLANEJAMENTO</div><h2>Minhas listas</h2><p>Escolha produtos já catalogados e gere uma lista nova sem duplicar o histórico.</p></div><button class="primary" id="newListBtn">+ Nova lista</button></div>
+  <div class="section-head"><div><div class="eyebrow">ROTINA DA CASA</div><h2>Minhas listas de compras</h2><p>Cadastre seus itens de costume, importe uma planilha XLSX, monte a lista da próxima ida e acompanhe quanto gastou em cada mercado.</p></div><div class="top-actions"><button class="ghost" id="listTemplateBtn">Baixar modelo XLSX</button><button class="primary" id="listXlsxBtn">Importar XLSX</button><input id="listXlsxFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden><button class="primary" id="newListBtn">+ Nova lista</button></div></div>
+  <div class="offline-banner"><b>Funciona offline</b><span>Lista, cadastro, histórico, comparações, insights da lógica e impressão ficam no dispositivo. A IA/Gemini só é usada quando houver internet e servidor local configurado.</span></div><div id="listImportStatus" class="list-import-status" data-state="idle"><span class="status-dot"></span><div><b id="listImportStatusTitle">Pronto para sua rotina</b><p id="listImportStatusText">Você pode criar uma lista, cadastrar itens ou importar um XLSX.</p></div></div>
+  <div class="panel list-how"><div><span class="step-no">1</span><b>Cadastre</b><small>Itens de costume</small></div><div><span class="step-no">2</span><b>Monte</b><small>Lista da ida</small></div><div><span class="step-no">3</span><b>Compre</b><small>Marque o que levou</small></div><div><span class="step-no">4</span><b>Registre</b><small>Total + mercado</small></div><div><span class="step-no">5</span><b>Compare</b><small>Histórico e insights</small></div></div>
   <div id="listsArea"></div>
 </section>
 
 <section id="importar" class="page">
-  <div class="section-head"><div><div class="eyebrow">ENTRADA</div><h2>Importar comprovante</h2><p>Foto/PDF → extração → cruzamento → conferência → gravação.</p></div></div>
+  <div class="section-head"><div><div class="eyebrow">ENTRADA</div><h2>Importar comprovante</h2><p>Recurso complementar: foto/PDF → extração → cruzamento → conferência. Para a rotina diária, prefira as listas e registre o total da ida ao mercado.</p></div><div class="top-actions"><button class="ghost" id="goListsFromImportBtn" type="button">Minhas listas</button><button class="ghost" id="importListXlsxFromImportBtn" type="button">Importar lista XLSX</button></div></div>
   <div class="import-tabs"><button class="tab active" data-mode="file">Arquivo</button><button class="tab" data-mode="manual">Manual</button></div>
   <div class="import-grid">
     <div class="panel">
@@ -89,13 +96,13 @@
 </section>
 
 <section id="produtos" class="page">
-  <div class="section-head"><div><div class="eyebrow">CATÁLOGO MESTRE</div><h2>Produtos</h2><p>Um produto pode aparecer em muitas compras, mas só uma vez no catálogo.</p></div><input id="productSearch" class="search" placeholder="Buscar nome, marca ou embalagem"></div>
+  <div class="section-head"><div><div class="eyebrow">CADASTRO DE ITENS</div><h2>Itens de costume</h2><p>Seu catálogo doméstico. Cadastre uma vez e reutilize em várias listas.</p></div><div class="top-actions"><button class="primary" id="newProductBtn">+ Cadastrar item</button><input id="productSearch" class="search" placeholder="Buscar nome, marca ou embalagem"></div></div>
   <div class="filter-row"><select id="productCategoryFilter"><option value="">Todas as categorias</option></select><select id="healthFilter"><option value="">Todos os perfis</option><option>Saudável</option><option>Moderado</option><option>Evitar</option><option>Não classificado</option></select></div>
   <div class="table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Apresentação</th><th>Último preço</th><th>Ocorrências</th><th>Ações</th></tr></thead><tbody id="productsTable"></tbody></table></div>
 </section>
 
 <section id="mercados" class="page">
-  <div class="section-head"><div><div class="eyebrow">COMPARAÇÃO</div><h2>Mercados</h2><p>O histórico por estabelecimento evita conclusões baseadas em uma única compra.</p></div></div>
+  <div class="section-head"><div><div class="eyebrow">COMPARAÇÃO</div><h2>Mercados</h2><p>Cadastre os mercados que você frequenta e acompanhe os gastos por estabelecimento.</p></div><button class="primary" id="newMarketBtn" type="button">+ Cadastrar mercado</button></div>
   <div id="marketCards" class="market-grid"></div>
 </section>
 
@@ -134,12 +141,13 @@
     <label>Modelo Gemini<select id="geminiModel"><option value="gemini-3.7-flash">gemini-3.7-flash</option><option value="gemini-3.6-flash">gemini-3.6-flash</option><option value="gemini-3.5-flash">gemini-3.5-flash</option></select></label>
     <div class="security"><b>Modo seguro</b><p>A chave Gemini não é armazenada no navegador. A IA visual e o agente só usam o servidor local seguro, com a chave mantida no arquivo de ambiente do servidor.</p><p><b>OCR local:</b> funciona sem chave. <b>IA fiscal:</b> usa <code>CONSULTADANFE_API_URL</code>/<code>CONSULTADANFE_API_KEY</code> no servidor local. A chave nunca é salva no navegador.</p></div>
     <button class="primary" id="saveSettings">Salvar configurações</button>
+    <div class="danger-zone"><div><h3>Começar do zero</h3><p>Apaga os dados de compras, produtos, mercados, listas, anexos e auditoria deste dispositivo. As configurações permanecem.</p></div><button class="danger" id="resetUserDataBtn" type="button">Apagar todos os dados</button></div>
   </div>
 </section>
 
 <section id="updates" class="page">
   <div class="section-head"><div><div class="eyebrow">MANUTENÇÃO</div><h2>Atualizações</h2><p>O app usa versionamento e migrações para preservar o histórico.</p></div><button class="ghost" id="checkUpdate">Verificar</button></div>
-  <div class="panel"><div class="version-box"><span>Versão instalada</span><strong id="currentVersion">2.6.1</strong></div><div id="updateStatus" class="helper">Nenhuma verificação realizada.</div><div class="method-grid"><div><b>Atualização estática</b><p>Substitua os arquivos publicados por um novo pacote versionado.</p></div><div><b>Banco protegido</b><p>As migrações são executadas antes do carregamento e não apagam dados históricos.</p></div><div><b>Backup antes do update</b><p>Exporte um JSON antes de trocar a versão.</p></div><div><b>Sem “autoapagar”</b><p>Exclusão é lógica/arquivamento; registros históricos continuam recuperáveis.</p></div></div></div>
+  <div class="panel"><div class="version-box"><span>Versão instalada</span><strong id="currentVersion">2.8.2</strong></div><div id="updateStatus" class="helper">Nenhuma verificação realizada.</div><div class="method-grid"><div><b>Atualização estática</b><p>Substitua os arquivos publicados por um novo pacote versionado.</p></div><div><b>Banco protegido</b><p>As migrações são executadas antes do carregamento e não apagam dados históricos.</p></div><div><b>Backup antes do update</b><p>Exporte um JSON antes de trocar a versão.</p></div><div><b>Sem “autoapagar”</b><p>Exclusão é lógica/arquivamento; registros históricos continuam recuperáveis.</p></div></div></div>
 </section>
 
 
@@ -162,6 +170,6 @@
 <div id="toast" class="toast"></div>
 
 
-<script src="app.js"></script>
+<script src="app.js?v=2.8.6"></script>
 </body>
 </html>

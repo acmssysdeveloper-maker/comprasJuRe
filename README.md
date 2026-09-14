@@ -1,6 +1,6 @@
-# Compras da JuRe — v2.7.1
+# Compras da JuRe — v2.8.0
 
-Aplicação local-first para histórico de compras domésticas, com importação de comprovantes em operação anti-falhas.
+Aplicação local-first para rotina doméstica de listas de compras, catálogo de itens de costume, registro offline do total por mercado e importação de comprovantes como recurso complementar.
 
 ## Execução
 
@@ -69,7 +69,7 @@ Há dois caminhos no aplicativo. `Consultar por chave` usa `/api/v1/consulta` pa
 A chave fiscal é localizada pelo QR/OCR, validada pelo dígito verificador e enviada somente pelo servidor local.
 
 
-## Auditoria contextual v2.7.1
+## Auditoria contextual v2.8.0
 
 Antes de publicar uma compra, o JuRe executa uma auditoria determinística em duas frentes. No produto, usa primeiro código/EAN e depois cruza nome normalizado, abreviações, marca, embalagem, unidade e categoria com o catálogo existente. Associações ambíguas não são publicadas automaticamente.
 
@@ -77,5 +77,18 @@ No comprovante, o sistema rastreia CNPJ, estabelecimento, data, hora, total, nú
 
 O fingerprint sem chave fiscal inclui estabelecimento, CNPJ, data, hora, documento, total e assinatura das linhas. Quando existe chave fiscal de 44 dígitos, ela passa a ser o identificador primário da compra para impedir duplicações.
 
-### v2.7.1 — Auditoria antes do lançamento
+### v2.8.0 — Auditoria antes do lançamento
 O motor `modules/receipt-auditor.js` passou a auditar cada linha individualmente e o documento como um todo. O lançamento só pode avançar quando os campos obrigatórios estão presentes e a matemática fecha; dúvidas de identidade ficam em revisão e divergências financeiras bloqueiam a publicação. A especificação detalhada está em `docs/AUDITORIA_ALGORITMOS_2.0.md`.
+
+## Fluxo principal v2.8.0 — listas primeiro
+O fluxo recomendado da aplicação passou a ser offline-first para a rotina doméstica:
+
+1. **Itens de costume:** cadastre os itens uma vez no catálogo.
+2. **Planilha XLSX:** em `Minhas listas`, baixe o modelo ou importe uma planilha com as colunas `Nome do item`, `Marca`, `Categoria`, `Embalagem`, `Unidade`, `Quantidade`, `Mercado preferido` e `Código/EAN`.
+3. **Lista da ida:** uma lista pode ser reutilizada várias vezes. Marque os itens efetivamente comprados.
+4. **Registro rápido:** ao voltar do mercado, informe o mercado, a data e somente o **gasto total**. O JuRe não inventa preços por item.
+5. **Comparação:** o histórico permite comparar total acumulado e média por ida entre mercados e listas.
+6. **Offline:** catálogo, listas, registros, insights determinísticos e relatórios imprimíveis continuam funcionando sem internet.
+7. **IA online:** o Agente JuRe e a leitura visual de comprovantes usam o servidor local/Gemini quando a conexão estiver disponível.
+
+A importação de comprovantes permanece como caminho complementar, especialmente útil quando houver necessidade de preços por item e dados fiscais detalhados. Como o OCR ainda pode apresentar erros em determinados documentos, nenhum registro é considerado confirmado somente pela leitura automática.

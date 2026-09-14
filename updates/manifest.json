@@ -1,15 +1,5 @@
 {
-  "app": "Compras da JuRe",
-  "version": "2.7.1",
-  "minSchemaVersion": 3,
-  "released": "2026-09-11",
-  "notes": [
-    "Motor OCR anti-falhas: QR validado, múltiplos pré-processamentos, OCR regional, clustering de evidências e validação matemática.",
-    "IA visual e agente usam exclusivamente proxy local; nenhuma chave Gemini é armazenada no navegador.",
-    "Fallback opcional OCR secundário via proxy local; divergências nunca são mescladas cegamente.",
-    "Correção do parser numérico para valores BR/decimal e eliminação de seed.json duplicado.",
-    "Integração fiscal corrigida: campo chave, pdf_base64/xml_base64, rota por XML e downloads dos artefatos.",
-    "Novo auditor contextual: associa produtos por EAN e histórico de descrições, rastreia duplicidades por chave/data/hora/CNPJ/total e bloqueia publicação quando a matemática ou a associação não fecha.",
-    "Auditoria 3.0: evidência formal por campo, rastreabilidade de origem/método/confiança, gate de publicação estrito, persistência de auditEvidence/auditTrace e associação manual auditável."
-  ]
+  "version": "2.8.6",
+  "release": "Começar do zero + listas offline",
+  "notes": "Adiciona limpeza completa dos dados do usuário sem resemeadura automática e mantém configurações do aplicativo."
 }

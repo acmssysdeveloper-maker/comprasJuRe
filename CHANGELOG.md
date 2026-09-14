@@ -1,3 +1,25 @@
+## 2.8.6 — Exclusão de itens de costume
+- Adiciona ação **Excluir** na lista de produtos.
+- A exclusão é segura: o item sai do catálogo ativo sem apagar referências históricas de compras ou listas.
+- Exibe confirmação diferente quando existem referências.
+- Mantém auditoria da operação.
+
+## 2.8.5
+
+- Adicionado "Começar do zero" em Configurações.
+- Limpa dados de uso sem apagar configurações do aplicativo.
+- Evita que o banco seja resemeado automaticamente após uma limpeza intencional.
+
+## v2.8.0 — Listas offline como fluxo principal
+
+- catálogo de itens de costume e cadastro rápido;
+- importação offline de XLSX para criação de lista;
+- modelo XLSX embutido e download;
+- registro de ida ao mercado pelo total informado, sem inventar preço por item;
+- comparação de gastos por mercado e por lista;
+- insights locais e relatório imprimível preservados offline;
+- comprovante OCR mantido como recurso complementar.
+
 ## v2.6.5 — auditoria contextual e reconciliação
 
 - Novo `modules/receipt-auditor.js` para associação contextual de produtos e auditoria financeira antes da publicação.
@@ -172,7 +194,7 @@
 - Falta de qualquer campo obrigatório, divergência aritmética ou reconciliação documental incompleta bloqueia o lançamento.
 - O OCR continua sendo evidência de entrada; a auditoria é a barreira antes da persistência.
 
-## 2.7.1 — Evidência formal por campo
+## 2.8.0 — Evidência formal por campo
 - Objeto de evidência individual por campo de documento e item.
 - Rastreabilidade de origem, método, confiança, corroboração, conflitos e motivo da aceitação.
 - Barreira de publicação: somente `PASS` pode ser gravado automaticamente.
@@ -180,7 +202,7 @@
 - Produto `NEW` não é confundido com erro; associações `AMBIGUOUS/REVIEW/WEAK` exigem revisão.
 - Reconciliação monetária passa a usar valor bruto calculado por quantidade × preço e desconta descontos exatamente uma vez.
 
-## v2.7.1 — correção cirúrgica de associação de catálogo
+## v2.8.0 — correção cirúrgica de associação de catálogo
 - EAN/código incompatível agora é contradição bloqueadora para associação automática.
 - `NEW`, `WEAK` e `REVIEW` nunca preenchem `matchedProduct` automaticamente.
 - Mesmo EAN com variante semântica divergente (ex.: ZERO vs comum) exige revisão.

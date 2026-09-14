@@ -12,9 +12,13 @@ if not defined CONSULTADANFE_AUTH_HEADER if exist .env for /f "usebackq tokens=1
 if not defined CONSULTADANFE_AUTH_PREFIX if exist .env for /f "usebackq tokens=1,* delims==" %%A in (".env") do if /I "%%A"=="CONSULTADANFE_AUTH_PREFIX" set "CONSULTADANFE_AUTH_PREFIX=%%B"
 if not defined CONSULTADANFE_DANFE_URL if exist .env for /f "usebackq tokens=1,* delims==" %%A in (".env") do if /I "%%A"=="CONSULTADANFE_DANFE_URL" set "CONSULTADANFE_DANFE_URL=%%B"
 if not defined PORT set PORT=8000
-start "JuRe Server" cmd /c "node server.mjs"
+
+rem Encerra qualquer servidor JuRe antigo ocupando a porta, evitando abrir uma versao anterior
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":%PORT% .*LISTENING"') do taskkill /PID %%P /F >nul 2>nul
+
+start "JuRe Server" cmd /c "cd /d "%~dp0" && node server.mjs"
 timeout /t 2 >nul
-start "" http://localhost:%PORT%/
+start "" http://localhost:%PORT%/?jure=2.8.6&cacheBust=%RANDOM%%RANDOM%
 exit /b
 :no_node
 echo Node.js 18+ e necessario para o servidor local seguro.
