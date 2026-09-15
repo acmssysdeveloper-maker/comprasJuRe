@@ -1,6 +1,13 @@
-# Compras da JuRe — v2.8.7
+# Compras da JuRe — v2.8.13
 
 Aplicação local-first para rotina doméstica de listas de compras, catálogo de itens de costume, registro offline do total por mercado e importação de comprovantes como recurso complementar.
+
+## 2.8.13 — atualização online sob controle do usuário
+A conferência online de estabelecimentos foi isolada em um painel recolhível. O painel começa fechado, é aberto somente ao clicar em **Atualizar lista** e possui um **X** para encerramento imediato. Isso evita que os resultados empurrem os cards de mercados para baixo.
+
+Quando a auditoria encontrar um estabelecimento classificado como **novo**, o resultado apresenta **Incluir na lista**. A inclusão é deliberada pelo usuário, registrada na auditoria e não altera automaticamente nenhum cadastro existente. O novo registro continua disponível para edição, ativação/desativação e uso nas sessões de compra.
+
+Regra de segurança: ausência em uma fonte online nunca é considerada prova de fechamento. A conferência continua informativa; a inclusão também é uma decisão explícita do usuário.
 
 ## Execução
 
@@ -29,6 +36,23 @@ O OCR nunca é tratado como verdade. Leituras conflitantes não são somadas ceg
 A chave Gemini **não fica no navegador**. O servidor usa `GEMINI_API_KEY` do ambiente local. Não existe caminho de API key direta no JavaScript público.
 
 O servidor escuta somente em `127.0.0.1`, usa cabeçalhos básicos de segurança e aplica limite de payload.
+
+## Modo mercado no smartphone
+
+Abra uma lista em **Abrir lista** para entrar em uma tela independente. Durante a compra, marque cada item com o checkbox grande, informe o preço quando quiser e use **Incluir** para acrescentar produtos do catálogo sem abandonar a lista. A rotina funciona offline e grava o estado no IndexedDB.
+
+## Mercados de Saquarema e conferência online
+
+A tela **Mercados** começa com um cadastro inicial organizado por bairro e totalmente editável. O usuário pode pesquisar por nome/endereço, filtrar por bairro e status e editar, desativar ou reativar estabelecimentos.
+
+O botão **Atualizar lista** não sincroniza nem altera o banco automaticamente. Ele solicita ao servidor local uma conferência online em fontes públicas configuradas por `MARKET_CHECK_SOURCES`. O resultado pode apontar:
+
+- novo estabelecimento encontrado;
+- informação divergente;
+- possível inatividade somente quando houver evidência explícita;
+- ausência de evidência suficiente.
+
+A ausência de um estabelecimento em uma fonte **não é tratada como prova de fechamento**. Quando `GEMINI_API_KEY` está configurada, o Gemini faz uma reconciliação conservadora das evidências. Sem Gemini, o fallback determinístico continua disponível. Em ambos os casos, a decisão final permanece com o usuário. Consulte `docs/MARKET_ONLINE_AUDIT_2.8.13.md`.
 
 ## Dados
 
@@ -69,7 +93,7 @@ Há dois caminhos no aplicativo. `Consultar por chave` usa `/api/v1/consulta` pa
 A chave fiscal é localizada pelo QR/OCR, validada pelo dígito verificador e enviada somente pelo servidor local.
 
 
-## Auditoria contextual v2.8.7
+## Auditoria contextual v2.8.13
 
 Antes de publicar uma compra, o JuRe executa uma auditoria determinística em duas frentes. No produto, usa primeiro código/EAN e depois cruza nome normalizado, abreviações, marca, embalagem, unidade e categoria com o catálogo existente. Associações ambíguas não são publicadas automaticamente.
 
@@ -77,10 +101,10 @@ No comprovante, o sistema rastreia CNPJ, estabelecimento, data, hora, total, nú
 
 O fingerprint sem chave fiscal inclui estabelecimento, CNPJ, data, hora, documento, total e assinatura das linhas. Quando existe chave fiscal de 44 dígitos, ela passa a ser o identificador primário da compra para impedir duplicações.
 
-### v2.8.7 — Auditoria antes do lançamento
+### v2.8.13 — Auditoria antes do lançamento
 O motor `modules/receipt-auditor.js` passou a auditar cada linha individualmente e o documento como um todo. O lançamento só pode avançar quando os campos obrigatórios estão presentes e a matemática fecha; dúvidas de identidade ficam em revisão e divergências financeiras bloqueiam a publicação. A especificação detalhada está em `docs/AUDITORIA_ALGORITMOS_2.0.md`.
 
-## Fluxo principal v2.8.7 — listas primeiro
+## Fluxo principal v2.8.13 — listas primeiro
 O fluxo recomendado da aplicação passou a ser offline-first para a rotina doméstica:
 
 1. **Itens de costume:** cadastre os itens uma vez no catálogo.
@@ -92,3 +116,20 @@ O fluxo recomendado da aplicação passou a ser offline-first para a rotina dom�
 7. **IA online:** o Agente JuRe e a leitura visual de comprovantes usam o servidor local/Gemini quando a conexão estiver disponível.
 
 A importação de comprovantes permanece como caminho complementar, especialmente útil quando houver necessidade de preços por item e dados fiscais detalhados. Como o OCR ainda pode apresentar erros em determinados documentos, nenhum registro é considerado confirmado somente pela leitura automática.
+
+## 2.8.13 — classificação e experiência de uso
+
+O catálogo agora trabalha com dois eixos diferentes:
+
+- **Setor:** Laticínios, Padaria e Confeitaria, Carnes e Aves, Peixes e Frutos do Mar, Hortifruti, Mercearia, Bebidas, Biscoitos e Snacks, Chocolates e Doces, Congelados, Alimentos Naturais, Conservas e Molhos, Café/Chá/Achocolatados, Temperos/Condimentos/Ingredientes, Limpeza, Higiene Pessoal, Bebês e Crianças, Pet, Farmácia e Cuidados, Casa e Utilidades, Descartáveis, Papelaria e Papel, Lavanderia e Outros.
+- **Classificação alimentar:** Saudável ou Não saudável.
+
+Novos produtos precisam informar ambos. `Não classificado` é mantido apenas para cadastros históricos que ainda precisam de revisão.
+
+### Sessão de mercado
+
+O mercado pertence à **sessão de compras**, não ao produto. Ao escolher o estabelecimento, os itens marcados durante aquela sessão recebem automaticamente o estabelecimento e a sessão. Ao trocar de mercado, os itens já marcados permanecem preservados e os próximos pertencem à nova sessão.
+
+### UX 40+
+
+A interface 2.8.13 adota tipografia mais confortável, campos de 16px, controles com área de toque ampliada, maior contraste e menos densidade visual no fluxo de compra. Consulte `docs/UX_40PLUS_2.8.13.md`.

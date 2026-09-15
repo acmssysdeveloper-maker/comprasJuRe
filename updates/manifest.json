@@ -1,5 +1,5 @@
 {
-  "version": "2.8.7",
-  "release": "Começar do zero + listas offline",
-  "notes": "Adiciona limpeza completa dos dados do usuário sem resemeadura automática e mantém configurações do aplicativo."
+  "version": "2.8.13",
+  "release": "Atualização online fechável e inclusão de novos mercados",
+  "notes": "Resultados da conferência online ficam em painel recolhível com botão X. Novos estabelecimentos encontrados podem ser incluídos manualmente na lista, sem sincronização automática. Documentação e versionamento atualizados."
 }

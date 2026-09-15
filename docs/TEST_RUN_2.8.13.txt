@@ -1,0 +1,33 @@
+Compras da JuRe — TEST RUN v2.8.13
+==================================
+Data da validação: 2026-09-15
+
+Objetivo: corrigir o painel expandido de atualização online, adicionar fechamento por X e permitir inclusão manual dos estabelecimentos classificados como novos.
+
+Checks:
+- node --check app.js: PASS
+- node --check server.mjs: PASS
+- tests/validate.mjs: PASS
+- tests/market-list-ux-test.mjs: PASS
+- tests/market-update-audit-test.mjs: PASS
+- tests/market-update-ui-test.mjs: PASS
+- tests/run-all.mjs: PASS
+
+Resultado do runner:
+ALL TESTS: PASS
+
+Critérios funcionais:
+[PASS] Painel de atualização inicia fechado e não empurra os cards.
+[PASS] Clique em “Atualizar lista” abre o painel de resultados.
+[PASS] Botão X fecha o painel e limpa os resultados.
+[PASS] Resultado “Novo encontrado” oferece “Incluir na lista”.
+[PASS] Inclusão cria cadastro local editável.
+[PASS] Inclusão registra auditoria com ação online-include.
+[PASS] Proteção básica contra duplicidade por nome/bairro/endereço disponível.
+[PASS] Consulta online continua sem alterar automaticamente cadastros existentes.
+[PASS] Ausência em fonte continua não sendo tratada como prova de fechamento.
+[PASS] APP_VERSION = 2.8.13.
+[PASS] DB_VERSION = 9; nenhuma migração estrutural necessária.
+[PASS] Manifest e updates/manifest.json = 2.8.13.
+[PASS] /api/status = 2.8.13.
+[PASS] Documentação técnica e changelog atualizados.

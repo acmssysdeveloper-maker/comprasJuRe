@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const app=fs.readFileSync("app.js","utf8");
+const html=fs.readFileSync("index.html","utf8");
+const css=fs.readFileSync("styles.css","utf8");
+assert.match(app,/APP_VERSION="2\.8\.13"/);
+assert.match(app,/function closeMarketUpdatePanel/);
+assert.match(app,/function includeOnlineMarket/);
+assert.match(app,/data-online-market/);
+assert.match(app,/online-include/);
+assert.match(app,/marketUpdatePanel/);
+assert.match(html,/id="marketUpdatePanel"/);
+assert.match(html,/class="market-update-panel hidden"/);
+assert.match(html,/id="closeMarketUpdateBtn"/);
+assert.match(app,/Incluir na lista/);
+assert.match(css,/\.market-update-close/);
+assert.match(css,/\.market-update-include/);
+console.log("Compras da JuRe v2.8.13 market update UI checks: PASS");

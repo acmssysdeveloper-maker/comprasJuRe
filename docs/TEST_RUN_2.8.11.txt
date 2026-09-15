@@ -1,0 +1,13 @@
+Compras da JuRe v2.8.12
+Revisão: lista de estabelecimentos + UX mobile
+
+Testes previstos:
+- validação estática
+- UX do Modo Mercado
+- auditoria de atualização online
+- classificação de produtos
+- UX 40+
+- parser/reader/NFC-e
+- segurança do servidor
+- auditoria anti-falhas
+- execução completa da suíte

@@ -8,12 +8,12 @@
 <meta name="theme-color" content="#085ED7">
 <meta property="og:title" content="Compras da JuRe">
 <meta property="og:image" content="assets/jure-logo.svg">
-<link rel="stylesheet" href="styles.css?v=2.8.7">
+<link rel="stylesheet" href="styles.css?v=2.8.13">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<title>Compras da JuRe v2.8.7</title>
-<script defer src="modules/receipt-engine.js?v=2.8.7"></script>
-<script defer src="modules/receipt-auditor.js?v=2.8.7"></script>
+<title>Compras da JuRe v2.8.13</title>
+<script defer src="modules/receipt-engine.js?v=2.8.13"></script>
+<script defer src="modules/receipt-auditor.js?v=2.8.13"></script>
 </head>
 <body>
 <div class="shell">
@@ -36,7 +36,7 @@
     <button data-page="config">⚙ <span>Configurações</span></button>
     <button data-page="updates">↻ <span>Atualizações</span></button>
   </nav>
-  <div class="side-foot">v2.8.7 · listas + compras offline</div>
+  <div class="side-foot">v2.8.13 · listas + compras offline</div>
 </aside>
 
 <main>
@@ -57,7 +57,11 @@
     <div class="card good"><span>Economia comprovada</span><strong id="kpiDiscount">R$ 0,00</strong><small>descontos registrados</small></div>
   </div>
   <div class="grid2">
-    <div class="panel"><div class="panel-head"><h3>Gasto por categoria</h3></div><div id="categoryChart"></div></div>
+    <div class="panel"><div class="panel-head"><h3>Gasto por setor</h3><span class="badge">histórico</span></div><div id="sectorChart"></div></div>
+    <div class="panel"><div class="panel-head"><h3>Perfil alimentar</h3><span class="badge">por valor</span></div><div id="healthChart"></div></div>
+  </div>
+  <div class="panel"><div class="panel-head"><h3>Gasto por categoria</h3></div><div id="categoryChart"></div></div>
+  <div class="grid2">
     <div class="panel"><div class="panel-head"><h3>Últimas compras</h3><button class="link" data-go="compras">Ver tudo</button></div><div id="recentPurchases"></div></div>
   </div>
   <div class="panel"><div class="panel-head"><h3>Insights da casa</h3><span class="badge">com base no histórico</span></div><div id="dashboardInsights" class="insights"></div></div>
@@ -73,6 +77,11 @@
   <div class="offline-banner"><b>Funciona offline</b><span>Lista, cadastro, histórico, comparações, insights da lógica e impressão ficam no dispositivo. A IA/Gemini só é usada quando houver internet e servidor local configurado.</span></div><div id="listImportStatus" class="list-import-status" data-state="idle"><span class="status-dot"></span><div><b id="listImportStatusTitle">Pronto para sua rotina</b><p id="listImportStatusText">Você pode criar uma lista, cadastrar itens ou importar um XLSX.</p></div></div>
   <div class="panel list-how"><div><span class="step-no">1</span><b>Cadastre</b><small>Itens de costume</small></div><div><span class="step-no">2</span><b>Monte</b><small>Lista da ida</small></div><div><span class="step-no">3</span><b>Compre</b><small>Marque o que levou</small></div><div><span class="step-no">4</span><b>Registre</b><small>Total + mercado</small></div><div><span class="step-no">5</span><b>Compare</b><small>Histórico e insights</small></div></div>
   <div id="listsArea"></div>
+</section>
+
+<section id="lista-ativa" class="page">
+  <div class="section-head"><div><div class="eyebrow">MODO MERCADO</div><h2 id="activeListTitle">Lista de compras</h2><p>Marque o que já colocou no carrinho, informe o preço e inclua novos itens sem sair da lista.</p></div><div class="top-actions"><button class="ghost" id="backToListsBtn">← Minhas listas</button></div></div>
+  <div id="activeListArea"></div>
 </section>
 
 <section id="importar" class="page">
@@ -98,13 +107,17 @@
 </section>
 
 <section id="produtos" class="page">
-  <div class="section-head"><div><div class="eyebrow">CADASTRO DE ITENS</div><h2>Itens de costume</h2><p>Seu catálogo doméstico. Cadastre uma vez e reutilize em várias listas.</p></div><div class="top-actions"><button class="primary" id="newProductBtn">+ Cadastrar item</button><input id="productSearch" class="search" placeholder="Buscar nome, marca ou embalagem"></div></div>
-  <div class="filter-row"><select id="productCategoryFilter"><option value="">Todas as categorias</option></select><select id="healthFilter"><option value="">Todos os perfis</option><option>Saudável</option><option>Moderado</option><option>Evitar</option><option>Não classificado</option></select></div>
-  <div class="table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Apresentação</th><th>Último preço</th><th>Ocorrências</th><th>Ações</th></tr></thead><tbody id="productsTable"></tbody></table></div>
+  <div class="section-head"><div><div class="eyebrow">CADASTRO DE ITENS</div><h2>Itens de costume</h2><p>Cadastre uma vez e reutilize em várias listas. Para manter os Insights confiáveis, setor e classificação alimentar são obrigatórios.</p></div><div class="top-actions"><button class="primary" id="newProductBtn">+ Cadastrar item</button><input id="productSearch" class="search" placeholder="Buscar nome, marca ou embalagem"></div></div>
+  <div class="filter-row"><select id="productSectorFilter"><option value="">Todos os setores</option></select><select id="healthFilter"><option value="">Todas as classificações</option><option>Saudável</option><option>Não saudável</option><option>Não classificado</option></select></div>
+  <div class="filter-help">Use os dois filtros juntos para encontrar rapidamente, por exemplo, <b>Hortifruti + Saudável</b>.</div>
+  <div class="table-wrap"><table><thead><tr><th>Produto</th><th>Setor</th><th>Classificação</th><th>Apresentação</th><th>Último preço</th><th>Ocorrências</th><th>Ações</th></tr></thead><tbody id="productsTable"></tbody></table></div>
 </section>
 
 <section id="mercados" class="page">
-  <div class="section-head"><div><div class="eyebrow">COMPARAÇÃO</div><h2>Mercados</h2><p>Cadastre os mercados que você frequenta e acompanhe os gastos por estabelecimento.</p></div><button class="primary" id="newMarketBtn" type="button">+ Cadastrar mercado</button></div>
+  <div class="section-head"><div><div class="eyebrow">ESTABELECIMENTOS</div><h2>Mercados</h2><p>Escolha o estabelecimento por sessão de compra. A lista inicial de Saquarema é organizada por bairro, editável e pode ser conferida online.</p></div><div class="top-actions"><button class="ghost" id="refreshMarketsBtn" type="button">↻ Atualizar lista</button><button class="primary" id="newMarketBtn" type="button">+ Cadastrar mercado</button></div></div>
+  <div class="market-update-panel hidden" id="marketUpdatePanel"><div class="market-update-banner" id="marketUpdateBanner" data-state="idle"><div class="market-update-icon">✓</div><div class="market-update-copy"><b id="marketUpdateTitle">Lista pronta</b><p id="marketUpdateText">A lista é local. Clique em “Atualizar lista” para conferir possíveis novidades ou alterações online.</p></div><button class="market-update-close" id="closeMarketUpdateBtn" type="button" aria-label="Fechar resultados da atualização" title="Fechar">×</button></div>
+  <div id="marketUpdateResults" class="market-update-results"></div></div>
+  <div class="market-filters"><input id="marketSearch" class="search" placeholder="Buscar mercado ou bairro"><select id="marketNeighborhoodFilter"><option value="">Todos os bairros</option></select><select id="marketStatusFilter"><option value="active">Ativos</option><option value="inactive">Inativos</option><option value="all">Todos</option></select></div>
   <div id="marketCards" class="market-grid"></div>
 </section>
 
@@ -149,7 +162,7 @@
 
 <section id="updates" class="page">
   <div class="section-head"><div><div class="eyebrow">MANUTENÇÃO</div><h2>Atualizações</h2><p>O app usa versionamento e migrações para preservar o histórico.</p></div><button class="ghost" id="checkUpdate">Verificar</button></div>
-  <div class="panel"><div class="version-box"><span>Versão instalada</span><strong id="currentVersion">2.8.7</strong></div><div id="updateStatus" class="helper">Nenhuma verificação realizada.</div><div class="method-grid"><div><b>Atualização estática</b><p>Substitua os arquivos publicados por um novo pacote versionado.</p></div><div><b>Banco protegido</b><p>As migrações são executadas antes do carregamento e não apagam dados históricos.</p></div><div><b>Backup antes do update</b><p>Exporte um JSON antes de trocar a versão.</p></div><div><b>Sem “autoapagar”</b><p>Exclusão é lógica/arquivamento; registros históricos continuam recuperáveis.</p></div></div></div>
+  <div class="panel"><div class="version-box"><span>Versão instalada</span><strong id="currentVersion">2.8.13</strong></div><div id="updateStatus" class="helper">Nenhuma verificação realizada.</div><div class="method-grid"><div><b>Atualização estática</b><p>Substitua os arquivos publicados por um novo pacote versionado.</p></div><div><b>Banco protegido</b><p>As migrações são executadas antes do carregamento e não apagam dados históricos.</p></div><div><b>Backup antes do update</b><p>Exporte um JSON antes de trocar a versão.</p></div><div><b>Sem “autoapagar”</b><p>Exclusão é lógica/arquivamento; registros históricos continuam recuperáveis.</p></div></div></div>
 </section>
 
 
@@ -172,6 +185,6 @@
 <div id="toast" class="toast"></div>
 
 
-<script src="app.js?v=2.8.7"></script>
+<script src="app.js?v=2.8.13"></script>
 </body>
 </html>

@@ -30,6 +30,7 @@ const DANFE_URL=process.env.CONSULTADANFE_API_URL||'';
 const DANFE_KEY=process.env.CONSULTADANFE_API_KEY||'';
 const DANFE_FIELD=process.env.CONSULTADANFE_REQUEST_FIELD||'chave';
 const DANFE_AUTH_HEADER=process.env.CONSULTADANFE_AUTH_HEADER||'Authorization';
+const MARKET_SOURCES=(process.env.MARKET_CHECK_SOURCES||'https://acheibemaqui.com/saquarema/mercados-e-padarias,https://www.saquaremaonline.net/mercados,https://www.supermercadosjuzan.com.br/lojas').split(',').map(x=>x.trim()).filter(Boolean);
 const DANFE_AUTH_PREFIX=process.env.CONSULTADANFE_AUTH_PREFIX ?? '';
 const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 function headers(type='application/json'){return {'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'no-referrer','Cross-Origin-Resource-Policy':'same-origin'}}
@@ -258,11 +259,36 @@ async function proxyNfceQr(req,res){
  }catch(e){return send(res,e?.name==='AbortError'?504:502,{ok:false,configured:true,error:e?.name==='AbortError'?'Tempo limite na consulta pública da NFC-e.':String(e?.message||e),code:e?.name==='AbortError'?'timeout':'network_error',publicUrl:u.toString()});}
 }
 
+
+function stripHtmlText(html){return String(html||'').replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/\s+/g,' ').trim()}
+function cleanSourceName(x){return String(x||'').replace(/\s+/g,' ').replace(/[|•·]+/g,' ').trim().replace(/^[-–—:]+|[-–—:]+$/g,'')}
+function extractMarketCandidates(html){
+ const out=[];const seen=new Set();
+ const anchors=[...String(html||'').matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)].map(m=>cleanSourceName(stripHtmlText(m[1])));
+ const pool=anchors.concat(stripHtmlText(html).split(/\s{2,}|(?=\b(?:Supermercado|Supermarket|Mercado|Atakarejo|Atacarejo|Hortifruti|Sacol[aã]o|Minimercado|Mini Mercado)\b)/i));
+ for(const raw of pool){const name=cleanSourceName(raw);if(name.length<4||name.length>100)continue;if(!/(supermercad|supermarket|mercado|atakarejo|atacarejo|hortifruti|sacol[aã]o|minimercado|mini mercado)/i.test(name))continue;if(/mercados\s*&\s*padarias|mercados em saquarema|lista de mercados|saquaremaonline/i.test(name))continue;const key=name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();if(!key||seen.has(key))continue;seen.add(key);out.push({name,source:'public'});if(out.length>=120)break}
+ return out;
+}
+function normMarket(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\b(supermercado|supermarket|mercado|atacarejo|atakarejo|hortifruti|mini|minimercado)\b/g,' ').replace(/\s+/g,' ').trim()}
+function marketSimilarity(a,b){const x=normMarket(a),y=normMarket(b);if(!x||!y)return 0;if(x===y)return 1;const A=new Set(x.split(' ')),B=new Set(y.split(' '));const inter=[...A].filter(v=>B.has(v)).length;return inter/Math.max(A.size,B.size)}
+async function fetchMarketSource(url){const u=new URL(url);if(u.protocol!=='https:')throw new Error('Fonte de mercados deve usar HTTPS');const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);try{const r=await fetch(u,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Compras-da-JuRe-Market-Auditor/2.8.13'},redirect:'follow',signal:controller.signal});const html=await r.text();return {url:r.url||url,status:r.status,ok:r.ok,text:stripHtmlText(html).slice(0,50000),candidates:extractMarketCandidates(html)};}finally{clearTimeout(timer)}}
+async function checkMarketsOnline(req,res){
+ let payload;try{payload=JSON.parse(await readBody(req,2_000_000))}catch{return send(res,400,{ok:false,error:'JSON inválido'});}
+ const current=Array.isArray(payload?.markets)?payload.markets:[];const sources=[];for(const url of MARKET_SOURCES){try{sources.push(await fetchMarketSource(url));}catch(e){sources.push({url,status:0,ok:false,error:String(e?.message||e),text:'',candidates:[]});}}
+ const sourceText=sources.filter(x=>x.ok).map(x=>`FONTE: ${x.url}\n${x.text}`).join('\n\n').slice(0,120000);let items=[];
+ for(const m of current){const sims=sources.filter(x=>x.ok).map(src=>Math.max(0,...src.candidates.map(c=>marketSimilarity(m.name,c.name))));const best=Math.max(0,...sims);if(best>=.75)continue;if(best===0)items.push({status:'uncertain',name:m.name,neighborhood:m.neighborhood||'',address:m.address||'',reason:'O cadastro não foi localizado nas fontes consultadas. Ausência online não prova que o estabelecimento esteja fechado.',confidence:.35});}
+ const candidates=[...new Map(sources.flatMap(s=>s.candidates).map(c=>[normMarket(c.name),c])).values()];for(const c of candidates){const best=Math.max(0,...current.map(m=>marketSimilarity(m.name,c.name)));if(best<.72)items.push({status:'new',name:c.name,neighborhood:'',address:'',reason:'Nome encontrado em fonte pública recente e não correspondido com segurança ao cadastro local.',confidence:.82});}
+ if(KEY){try{const prompt=`Você é auditor de estabelecimentos do Compras da JuRe. Compare o cadastro LOCAL com EVIDÊNCIAS ONLINE. Retorne SOMENTE JSON válido no formato {items:[{status:"new|changed|inactive|uncertain",name,neighborhood,address,reason,confidence}],summary:{totalChanges:number}}. REGRAS: nunca afirme fechamento apenas por ausência; use inactive somente quando houver evidência explícita de encerramento/inatividade; changed quando houver divergência clara de endereço/nome; new quando a fonte indicar estabelecimento que não existe no cadastro; uncertain quando a evidência for insuficiente. Não altere o cadastro. Seja conservador.\nCADASTRO LOCAL:\n${JSON.stringify(current)}\nFONTES:\n${sourceText}`;const j=await geminiRequest({model:MODEL,body:{systemInstruction:{parts:[{text:'Responda apenas JSON válido, sem markdown.'}]},contents:[{parts:[{text:prompt}]}]}});const txt=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';const ai=JSON.parse(cleanJsonText(txt));if(Array.isArray(ai.items))items=ai.items;}catch(e){/* fallback determinístico preservado */}}
+ const unique=[];const seen=new Set();for(const x of items){const k=`${x.status}|${normMarket(x.name)}|${normMarket(x.address)}`;if(seen.has(k))continue;seen.add(k);unique.push({...x,confidence:Math.max(0,Math.min(1,Number(x.confidence)||.5))});}
+ const summary={new:unique.filter(x=>x.status==='new').length,changed:unique.filter(x=>x.status==='changed').length,inactive:unique.filter(x=>x.status==='inactive').length,uncertain:unique.filter(x=>x.status==='uncertain').length,totalChanges:unique.filter(x=>x.status!=='uncertain').length,reviewCount:unique.length,sources:sources.map(x=>({url:x.url,ok:x.ok,status:x.status,error:x.error||''}))};return send(res,200,{ok:true,checkedAt:new Date().toISOString(),sources:sources.map(x=>({url:x.url,ok:x.ok,status:x.status,error:x.error||''})),items:unique,summary,ai:!!KEY});
+}
+
 function safePath(urlPath){const rel=decodeURIComponent(urlPath||'').replace(/^\/+/, '')||'index.html';const full=path.resolve(ROOT,rel);if(!full.startsWith(path.resolve(ROOT)+path.sep))return null;return full}
 const server=http.createServer(async(req,res)=>{
  try{
   const u=new URL(req.url,`http://${req.headers.host}`);
-  if(req.method==='GET'&&u.pathname==='/api/status')return send(res,200,{ok:true,version:'2.8.7',gemini:!!KEY,ocrSpace:!!OCR_KEY,consultadanfe:!!DANFE_URL,model:MODEL});
+  if(req.method==='GET'&&u.pathname==='/api/status')return send(res,200,{ok:true,version:'2.8.13',gemini:!!KEY,ocrSpace:!!OCR_KEY,consultadanfe:!!DANFE_URL,marketCheck:true,marketSources:MARKET_SOURCES.length,model:MODEL});
+  if(req.method==='POST'&&u.pathname==='/api/markets/check')return checkMarketsOnline(req,res);
   if(req.method==='POST'&&u.pathname==='/api/fiscal/consult')return proxyDanfeConsult(req,res);
   if(req.method==='POST'&&u.pathname==='/api/fiscal/danfe')return proxyDanfeXml(req,res);
   if(req.method==='POST'&&u.pathname==='/api/fiscal/nfce-qr')return proxyNfceQr(req,res);
@@ -274,4 +300,4 @@ const server=http.createServer(async(req,res)=>{
   let target=full;try{if(fs.statSync(target).isDirectory())target=path.join(target,'index.html');const data=fs.readFileSync(target);res.writeHead(200,headers(MIME[path.extname(target).toLowerCase()]||'application/octet-stream'));res.end(data)}catch{send(res,404,{error:'Não encontrado'})}
  }catch(e){send(res,500,{error:'Erro interno do servidor local'})}
 });
-server.listen(PORT,'127.0.0.1',()=>console.log(`Compras da JuRe 2.8.7 — http://localhost:${PORT} — Gemini ${KEY?'ATIVO':'sem chave'} — OCR.space ${OCR_KEY?'ATIVO':'sem chave'} — Consulta DANFE ${DANFE_URL?'ATIVA':'sem URL'}`));
+server.listen(PORT,'127.0.0.1',()=>console.log(`Compras da JuRe 2.8.13 — http://localhost:${PORT} — Gemini ${KEY?'ATIVO':'sem chave'} — OCR.space ${OCR_KEY?'ATIVO':'sem chave'} — Consulta DANFE ${DANFE_URL?'ATIVA':'sem URL'}`));

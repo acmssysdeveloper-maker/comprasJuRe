@@ -1,3 +1,46 @@
+# Changelog — Compras da JuRe
+
+## 2.8.13 — Atualização online fechável + inclusão manual de mercados
+- Resultados da conferência online agora ficam em painel próprio recolhível.
+- Adicionado botão **X** para fechar completamente a lista de atualizações e devolver espaço aos cards.
+- O painel de atualização inicia fechado; ele só ocupa espaço após o usuário solicitar a conferência.
+- Novos estabelecimentos encontrados online exibem **Incluir na lista**.
+- A inclusão é manual, auditada e protegida contra duplicidade por nome/bairro/endereço quando houver evidência suficiente.
+- Estabelecimentos incluídos recebem `source: online-audit` e permanecem editáveis como qualquer outro cadastro.
+- Nenhuma atualização online altera ou desativa automaticamente um estabelecimento existente.
+- Documentação técnica, manifesto, versão da aplicação e testes atualizados para 2.8.13.
+
+## 2.8.13 — 15/09/2026 — Revisão de estabelecimentos e UX mobile
+
+- Lista inicial de estabelecimentos de Saquarema revisada e organizada por bairro.
+- Seed ampliada com fontes públicas municipais e fontes locais recentes, preservando unidades distintas por endereço.
+- Cadastro continua editável; nenhuma fonte externa altera ou desativa estabelecimentos automaticamente.
+- Cards de mercados reorganizados para leitura rápida no smartphone, com hierarquia clara, endereço, status e histórico de compras.
+- Busca e filtros receberam layout mobile-first.
+- Migração adiciona novos estabelecimentos sem sobrescrever cadastros personalizados existentes.
+- Documentação e suíte completa de testes atualizadas para 2.8.13.
+
+## 2.8.9 — 14/09/2026 — Motor de classificação, sessões e UX 40+
+
+- Cadastro de produto passou a exigir **Setor** e **Classificação alimentar** (`Saudável` ou `Não saudável`).
+- Catálogo recebeu filtro independente por setor e classificação, com estado histórico `Não classificado` para saneamento de cadastros antigos.
+- Lista de setores padronizada em 24 grupos, mantendo `Outros` como fallback seguro.
+- Compras passam a guardar snapshot de setor e classificação no item, evitando que uma edição futura do catálogo altere análises históricas.
+- Modo mercado recebeu **sessão de estabelecimento**: o usuário escolhe o mercado da sessão; itens marcados herdam automaticamente mercado e sessão, sem cadastro de mercado por produto.
+- Troca de estabelecimento não apaga a lista nem os itens já marcados; a próxima marcação pertence à nova sessão.
+- Dashboard passou a exibir gasto por setor e perfil alimentar, além da visão por categoria existente.
+- UX revisada para usuários 40+: tipografia mais confortável, campos de entrada maiores, maior contraste, linguagem mais direta e áreas de toque ampliadas.
+- Documentação, versionamento, migração de banco e testes atualizados para 2.8.13.
+
+## 2.8.8 — 14/09/2026 — Modo mercado e lista independente
+
+- Abre cada lista em uma página independente, otimizada para uso durante a compra no smartphone.
+- Itens com fonte ampliada e leitura rápida, com checkbox grande para marcar o que já foi colocado no carrinho.
+- Campo de preço por item com teclado numérico no celular.
+- Ação **Incluir** permite adicionar produtos do catálogo durante a ida ao mercado, sem sair da lista.
+- Salvamento explícito da lista preserva marcações, preços, quantidades e itens incluídos.
+- Modo mercado funciona offline e mantém o fluxo anterior de registro do total da ida.
+
 ## 2.8.7 — 14/09/2026 — UX mobile e navegação
 
 - Navegação mobile refeita como sidebar lateral (drawer) com overlay e fechamento por toque/Esc.
@@ -216,3 +259,15 @@
 - Mesmo EAN com variante semântica divergente (ex.: ZERO vs comum) exige revisão.
 - UI deixa de exibir candidatos fracos como se fossem produtos associados.
 - Adicionado teste de regressão com o cenário real de 5 itens que havia produzido associações cruzadas.
+## 2.8.9 — 14/09/2026 — Classificação, sessões e UX 40+
+
+- Cadastro de produto passou a exigir **Setor** e **Classificação alimentar** (`Saudável` ou `Não saudável`).
+- Catálogo recebeu filtro independente por setor e classificação, com estado histórico `Não classificado` para saneamento de cadastros antigos.
+- Lista de setores padronizada em 24 grupos, mantendo `Outros` como fallback seguro.
+- Compras passam a guardar snapshot de setor e classificação no item, evitando que uma edição futura do catálogo altere análises históricas.
+- Modo mercado recebeu **sessão de estabelecimento**: o usuário escolhe o mercado da sessão; itens marcados herdam automaticamente mercado e sessão, sem cadastro de mercado por produto.
+- Troca de estabelecimento não apaga a lista nem os itens já marcados; a próxima marcação pertence à nova sessão.
+- Dashboard passou a exibir gasto por setor e perfil alimentar, além da visão por categoria existente.
+- UX revisada para usuários 40+: tipografia mais confortável, campos de entrada maiores, maior contraste, linguagem mais direta e áreas de toque ampliadas.
+- Documentação, versionamento, migração de banco e testes atualizados para 2.8.13.
+

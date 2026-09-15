@@ -1,0 +1,10 @@
+Compras da JuRe — TEST RUN 2.8.9
+Data: 14/09/2026
+
+PASS — static/security checks
+PASS — market-list UX checks
+PASS — mobile UX assertions (11)
+PASS — smoke test
+PASS — JavaScript syntax check
+
+Escopo: lista independente no modo mercado, checkbox, preço por item, inclusão de produtos e responsividade mobile.

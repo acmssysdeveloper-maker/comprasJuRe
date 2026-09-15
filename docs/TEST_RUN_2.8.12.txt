@@ -1,0 +1,16 @@
+Compras da JuRe v2.8.12
+
+Full regression:
+ALL TESTS: PASS
+
+Key UX checks:
+- market-list-ux-test: PASS
+- mobile-ux-test: PASS
+- market-update-audit-test: PASS
+- ux-40plus-test: PASS
+- product-classification-test: PASS
+
+Static:
+- node --check app.js: PASS
+- node --check server.mjs: PASS
+- ZIP integrity: pending final packaging

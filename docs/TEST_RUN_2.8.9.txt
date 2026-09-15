@@ -1,0 +1,20 @@
+COMPRAS DA JURE — TEST RUN 2.8.10
+Data: 15/09/2026
+
+PASS validate.mjs
+PASS mobile-ux-test.mjs (11)
+PASS market-list-ux-test.mjs
+PASS product-classification-test.mjs
+PASS ux-40plus-test.mjs
+PASS reader-engine-test.mjs
+PASS nfce-camera-test.mjs
+PASS nfce-server-contract-test.mjs
+PASS fiscal-api-test.mjs
+PASS receipt-parser-test.mjs
+PASS receipt-fixture-test.mjs
+PASS image-receipt-parser-test.mjs
+PASS evidence-field-audit-test.mjs
+PASS server-security-test.mjs
+PASS anti-fail-audit.mjs
+
+Nota: o runner agregado pode sofrer timeout durante inicialização de worker OCR; os testes críticos desta release foram executados individualmente.

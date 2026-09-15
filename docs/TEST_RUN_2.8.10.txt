@@ -1,0 +1,23 @@
+COMPRAS DA JURE — TEST RUN 2.8.10
+Data: 15/09/2026
+
+validate.mjs                         PASS
+market-list-ux-test.mjs             PASS
+market-update-audit-test.mjs        PASS
+mobile-ux-test.mjs                  PASS (11)
+product-classification-test.mjs     PASS
+ux-40plus-test.mjs                  PASS
+evidence-field-audit-test.mjs      PASS (12)
+anti-fail-audit.mjs                 PASS
+reader-engine-test.mjs              PASS
+ocr-hardening-test.mjs              PASS
+nfce-camera-test.mjs                PASS
+nfce-server-contract-test.mjs       PASS
+receipt-parser-test.mjs             PASS
+receipt-fixture-test.mjs            PASS
+server-security-test.mjs            PASS
+fiscal-api-test.mjs                 PASS
+
+FULL RUNNER: ALL TESTS: PASS
+
+Observação: no sandbox de execução, as fontes HTTPS públicas não aceitaram conexão direta. O endpoint de conferência tratou as fontes indisponíveis como evidência insuficiente e não alterou nenhum cadastro.

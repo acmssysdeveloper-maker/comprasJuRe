@@ -1,6 +1,6 @@
 # Compras da JuRe — Documentação Técnica e Especificação do Sistema
 
-**Versão:** 2.8.7  
+**Versão:** 2.8.13  
 **Data da especificação:** 10/09/2026  
 **Modelo:** aplicação web/PWA estática, local-first, sem backend obrigatório.  
 **Banco:** IndexedDB no dispositivo.  
@@ -1009,7 +1009,7 @@ Se algum núcleo estiver instável, novas funcionalidades devem esperar.
 
 ---
 
-## 34. Limites conhecidos do v2.8.7
+## 34. Limites conhecidos do v2.8.13
 
 ### 34.1 Política de leitura segura
 
@@ -1017,7 +1017,7 @@ O Tesseract local não é considerado fonte fiscal definitiva em fotografias de 
 
 O QR code, quando decodificado e validado pelo dígito verificador da chave de 44 posições, é tratado como evidência forte de identidade da NFC-e. Ele não substitui os itens, preços ou quantidades do corpo do documento.
 
-A chave Gemini não é armazenada no navegador. O único caminho aceito pela 2.8.7 é o `server.mjs`, com `GEMINI_API_KEY` no ambiente local.
+A chave Gemini não é armazenada no navegador. O único caminho aceito pela 2.8.13 é o `server.mjs`, com `GEMINI_API_KEY` no ambiente local.
 
 
 
@@ -1025,4 +1025,16 @@ A chave Gemini não é armazenada no navegador. O único caminho aceito pela 2.8
 2. Leitura multimodal de PDF está disponível quando Gemini estiver configurado.
 3. O comparativo de preços melhora progressivamente com histórico; não existe inferência confiável de mercado com uma única ocorrência.
 4. Perfil alimentar é um rótulo de organização pessoal, não diagnóstico ou aconselhamento nutricional.
-5. Chave Gemini direta no navegador não é suportada pela 2.8.7; o acesso é exclusivamente pelo proxy local.
+5. Chave Gemini direta no navegador não é suportada pela 2.8.13; o acesso é exclusivamente pelo proxy local.
+
+
+## Modo mercado — v2.8.13
+
+Cada lista ativa pode ser aberta na página independente `lista-ativa`. O estado de cada linha possui `checked`, `price` e `included`. `checked` registra que o item foi colocado no carrinho; `price` é opcional e aceita valor unitário informado durante a compra; `included` controla se o item participa da ida atual. A inclusão de produtos usa o catálogo existente e evita duplicação por `productId`. O modo funciona localmente via IndexedDB e não depende de internet.
+
+## v2.8.13 — Auditoria online de mercados: painel e inclusão controlada
+A conferência online usa um painel independente (`marketUpdatePanel`) que inicia oculto. A abertura ocorre somente por ação explícita em `refreshMarketsBtn`. O encerramento usa `closeMarketUpdatePanel`, que oculta o painel e limpa `marketUpdateResults`.
+
+Resultados com status `new` recebem a ação `Incluir na lista`. A função `includeOnlineMarket()` cria um registro local com `source: online-audit`, preserva nome/endereço/bairro encontrados quando disponíveis e registra auditoria com ação `online-include`. Antes da criação há uma verificação conservadora de duplicidade por nome + bairro + endereço disponíveis.
+
+O fluxo continua sendo **auditoria, não sincronização automática**: mercados existentes não são alterados pela consulta online, e ausência em uma fonte não é considerada prova de inatividade. A versão da aplicação é 2.8.13 e o `DB_VERSION` permanece 9.
